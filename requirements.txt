@@ -1,0 +1,9 @@
+# UI-TARS requirements (ui-tars-requirements.txt)
+numpy<2.0.0
+vllm==0.6.6
+
+# PDF Service requirements (pdf-service-requirements.txt)
+numpy>=2.0.0
+fastapi[all]
+weasyprint
+jinja2

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv*/
+*-venv/
+pdf-service-venv/
+ui-tars-venv/
+ui-tars-env/
+
+# Models & large files
+ui-tars-7b-dpo/
+**/models/
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Test outputs
+*.pdf
+reports/
+
+# OS & IDE
+.DS_Store
+.vscode/
+.idea/
