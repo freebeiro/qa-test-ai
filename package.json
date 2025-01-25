@@ -1,0 +1,17 @@
+{
+  "name": "chrome_extension_for_qa_testing_9lhj5c",
+  "version": "1.0.0",
+  "description": "## Environment Setup",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@midscene/cli": "^0.10.1",
+    "@midscene/web": "^0.10.1",
+    "ajv": "^8.12.0"
+  }
+}
