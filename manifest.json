@@ -1,12 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "QA Automation Tool",
+  "name": "QA Test Assistant",
   "version": "1.0",
-  "description": "A Chrome Extension for QA Automation using Midscene.",
-  "permissions": ["activeTab", "scripting", "storage"],
-  "background": {
-    "service_worker": "background.js"
-  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs",
+    "storage",
+    "<all_urls>",
+    "tabCapture",
+    "http://localhost:5800/*"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -15,9 +22,8 @@
       "128": "icons/icon128.png"
     }
   },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"]
+  }]
 }

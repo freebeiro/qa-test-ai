@@ -1,12 +1,33 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Received message:', request);
+  console.log('Content script received message:', request);
   
-  if (request.type === 'navigate') {
-    window.location.href = request.url;
-    sendResponse({success: true});
+  const actions = {
+    navigate: () => window.location.href = request.url,
+    click: () => document.querySelector(request.selector)?.click(),
+    type: () => {
+      const input = document.querySelector(request.selector);
+      if (input) input.value = request.text;
+    },
+    screenshot: async () => {
+      try {
+        const canvas = await html2canvas(document.documentElement, {
+          logging: false,
+          useCORS: true
+        });
+        sendResponse({ screenshot: canvas.toDataURL() });
+      } catch (error) {
+        console.error('Screenshot error:', error);
+        sendResponse({ error: error.message });
+      }
+    }
+  };
+
+  if (request.action === 'screenshot') {
+    actions.screenshot();
     return true;
   }
-  
-  sendResponse({error: 'Unknown action'});
+
+  actions[request.action]?.();
+  sendResponse({ success: true });
   return true;
 });
