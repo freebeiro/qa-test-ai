@@ -1,113 +1,97 @@
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('Popup loaded');
   const chat = document.getElementById('chat');
   const input = document.getElementById('input');
-  const generateBtn = document.getElementById('generate-report');
+  const sendButton = document.querySelector('button');
   let chatHistory = [];
 
-  async function captureScreenshot() {
+  // Wait for navigation and page load
+  async function waitForPageLoad() {
+    console.log('Waiting for page load...');
+    return new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  // Take screenshot using chrome.tabs API
+  async function takeScreenshot() {
+    console.log('Taking screenshot...');
     try {
       const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-      const response = await chrome.tabs.sendMessage(tab.id, {action: 'captureScreenshot'});
-      return response.screenshot;
+      console.log('Active tab:', tab.id);
+      
+      // Wait for any animations/loading
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const dataUrl = await chrome.tabs.captureVisibleTab(null, {
+        format: 'png',
+        quality: 100
+      });
+      
+      console.log('Screenshot taken successfully');
+      return dataUrl;
     } catch (error) {
-      console.error('Screenshot capture failed:', error);
-      return null;
+      console.error('Screenshot failed:', error);
+      throw error;
     }
   }
 
-  async function handleUITarsRequest(instruction, screenshot) {
-    const response = await fetch('http://localhost:8000/v1/chat/completions', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: "ui-tars",
-        messages: [{
-          role: "user",
-          content: [
-            {type: "text", text: instruction},
-            {type: "image_url", image_url: {url: screenshot}}
-          ]
-        }],
-        temperature: 0.1,
-        max_tokens: 1000
-      })
-    });
+  // Add message to chat UI
+  function addToChat(text, screenshot = null) {
+    console.log('Adding to chat:', {text, hasScreenshot: !!screenshot});
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message';
+    msgDiv.textContent = text;
+    chat.appendChild(msgDiv);
 
-    if (!response.ok) {
-      throw new Error(`UI-TARS Error: ${response.status}`);
+    if (screenshot) {
+      const img = document.createElement('img');
+      img.src = screenshot;
+      img.className = 'screenshot';
+      chat.appendChild(img);
     }
-    return await response.json();
+
+    chatHistory.push({text, screenshot});
+    chat.scrollTop = chat.scrollHeight;
   }
 
-  async function generatePDFReport() {
-    const response = await fetch('http://localhost:8001/generate-pdf', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({chat_history: chatHistory})
-    });
-
-    if (!response.ok) {
-      throw new Error('PDF generation failed');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'qa_report.pdf';
-    a.click();
-  }
-
-  input.addEventListener('keypress', async (e) => {
-    if (e.key === 'Enter' && input.value.trim()) {
-      const instruction = input.value;
-      input.value = '';
-
-      const userMsg = document.createElement('div');
-      userMsg.className = 'message user';
-      userMsg.textContent = instruction;
-      chat.appendChild(userMsg);
-
-      const loadingMsg = document.createElement('div');
-      loadingMsg.className = 'message bot loading';
-      loadingMsg.textContent = 'Processing...';
-      chat.appendChild(loadingMsg);
-
-      try {
-        const screenshot = await captureScreenshot();
-        const response = await handleUITarsRequest(instruction, screenshot);
-        
-        chatHistory.push({
-          role: 'user',
-          content: instruction,
-          screenshot: screenshot
-        });
-
-        chatHistory.push({
-          role: 'assistant',
-          content: response.choices[0].message.content
-        });
-
-        loadingMsg.className = 'message bot';
-        loadingMsg.textContent = response.choices[0].message.content;
-      } catch (error) {
-        loadingMsg.className = 'message error';
-        loadingMsg.textContent = `Error: ${error.message}`;
-      }
-
-      chat.scrollTop = chat.scrollHeight;
-    }
-  });
-
-  generateBtn.addEventListener('click', async () => {
+  // Handle user commands
+  async function handleCommand(command) {
+    console.log('Executing command:', command);
+    
     try {
-      await generatePDFReport();
+      // Show user command
+      addToChat(`> ${command}`);
+
+      // Execute command
+      if (command.toLowerCase().includes('go to')) {
+        const url = command.split('go to ')[1].trim();
+        const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+        
+        // Navigate
+        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+        await chrome.tabs.update(tab.id, {url: fullUrl});
+        
+        // Wait for load
+        await waitForPageLoad();
+        
+        // Take screenshot
+        const screenshot = await takeScreenshot();
+        
+        // Add result to chat
+        addToChat(`Navigated to ${url}`, screenshot);
+      }
     } catch (error) {
-      console.error('PDF generation failed:', error);
-      const errorMsg = document.createElement('div');
-      errorMsg.className = 'message error';
-      errorMsg.textContent = `Failed to generate PDF: ${error.message}`;
-      chat.appendChild(errorMsg);
+      console.error('Command failed:', error);
+      addToChat(`Error: ${error.message}`);
     }
+  }
+
+  // Handle button click
+  sendButton.addEventListener('click', async () => {
+    const command = input.value.trim();
+    if (!command) return;
+    
+    input.value = '';
+    await handleCommand(command);
   });
 });

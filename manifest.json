@@ -5,7 +5,14 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "tabs"
+    "tabs",
+    "storage",
+    "<all_urls>",
+    "tabCapture",
+    "http://localhost:5800/*"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",
