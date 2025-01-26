@@ -1,21 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>QA Automation Tool</title>
-  <style>
-    body { width: 400px; padding: 10px; font-family: system-ui; }
-    #chat { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
-    .message { margin: 10px 0; }
-    .screenshot { margin: 10px 0; max-width: 100%; border: 1px solid #ddd; }
-    input { width: 100%; padding: 8px; margin: 10px 0; }
-    button { width: 100%; padding: 8px; background: #2196f3; color: white; border: none; }
-  </style>
+    <title>QA Test Assistant</title>
+    <style>
+        body { 
+            width: 400px;
+            padding: 20px;
+            font-family: system-ui;
+        }
+        #chat { 
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .user { background: #e3f2fd; }
+        .assistant { background: #f5f5f5; }
+        .error { background: #ffebee; }
+        #input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #sendButton {
+            width: 100%;
+            padding: 8px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h1>QA Automation Tool</h1>
-  <div id="chat"></div>
-  <input type="text" id="input" placeholder="Enter command...">
-  <button>Send</button>
-  <script src="popup.js"></script>
+    <div id="chat"></div>
+    <input type="text" id="input" placeholder="Enter command (e.g., 'go to google.com')">
+    <button id="sendButton">Send</button>
+    <script src="popup.js"></script>
 </body>
 </html>

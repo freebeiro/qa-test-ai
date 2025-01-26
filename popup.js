@@ -1,97 +1,122 @@
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Popup loaded');
-  const chat = document.getElementById('chat');
-  const input = document.getElementById('input');
-  const sendButton = document.querySelector('button');
-  let chatHistory = [];
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize our UI elements
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const button = document.getElementById('sendButton');
 
-  // Wait for navigation and page load
-  async function waitForPageLoad() {
-    console.log('Waiting for page load...');
-    return new Promise(resolve => setTimeout(resolve, 2000));
-  }
-
-  // Take screenshot using chrome.tabs API
-  async function takeScreenshot() {
-    console.log('Taking screenshot...');
-    try {
-      const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-      console.log('Active tab:', tab.id);
-      
-      // Wait for any animations/loading
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const dataUrl = await chrome.tabs.captureVisibleTab(null, {
-        format: 'png',
-        quality: 100
-      });
-      
-      console.log('Screenshot taken successfully');
-      return dataUrl;
-    } catch (error) {
-      console.error('Screenshot failed:', error);
-      throw error;
-    }
-  }
-
-  // Add message to chat UI
-  function addToChat(text, screenshot = null) {
-    console.log('Adding to chat:', {text, hasScreenshot: !!screenshot});
-    
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'message';
-    msgDiv.textContent = text;
-    chat.appendChild(msgDiv);
-
-    if (screenshot) {
-      const img = document.createElement('img');
-      img.src = screenshot;
-      img.className = 'screenshot';
-      chat.appendChild(img);
+    // This function adds messages to our chat interface and includes proper logging
+    function addToChat(message, type = 'user') {
+        console.log('Adding message to chat:', message);
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = message;
+        chat.appendChild(messageDiv);
+        chat.scrollTop = chat.scrollHeight;
     }
 
-    chatHistory.push({text, screenshot});
-    chat.scrollTop = chat.scrollHeight;
-  }
+    // This function handles screenshot capture and display
+    async function captureAndShowScreenshot() {
+        console.log('Attempting to capture screenshot...');
+        try {
+            // Wait briefly for page to settle
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Capture the screenshot
+            const screenshot = await chrome.tabs.captureVisibleTab(null, {
+                format: 'png',
+                quality: 100
+            });
+            
+            console.log('Screenshot captured successfully');
 
-  // Handle user commands
-  async function handleCommand(command) {
-    console.log('Executing command:', command);
-    
-    try {
-      // Show user command
-      addToChat(`> ${command}`);
+            // Create and add screenshot to chat
+            const imgDiv = document.createElement('div');
+            imgDiv.className = 'screenshot';
+            const img = document.createElement('img');
+            img.src = screenshot;
+            img.style.maxWidth = '100%';
+            img.style.border = '1px solid #ddd';
+            img.style.borderRadius = '4px';
+            img.style.marginTop = '10px';
+            imgDiv.appendChild(img);
+            chat.appendChild(imgDiv);
+            chat.scrollTop = chat.scrollHeight;
 
-      // Execute command
-      if (command.toLowerCase().includes('go to')) {
-        const url = command.split('go to ')[1].trim();
-        const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-        
-        // Navigate
-        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-        await chrome.tabs.update(tab.id, {url: fullUrl});
-        
-        // Wait for load
-        await waitForPageLoad();
-        
-        // Take screenshot
-        const screenshot = await takeScreenshot();
-        
-        // Add result to chat
-        addToChat(`Navigated to ${url}`, screenshot);
-      }
-    } catch (error) {
-      console.error('Command failed:', error);
-      addToChat(`Error: ${error.message}`);
+            return true;
+        } catch (error) {
+            console.error('Screenshot failed:', error);
+            addToChat('Could not capture screenshot: ' + error.message, 'error');
+            return false;
+        }
     }
-  }
 
-  // Handle button click
-  sendButton.addEventListener('click', async () => {
-    const command = input.value.trim();
-    if (!command) return;
-    
-    input.value = '';
-    await handleCommand(command);
-  });
+    // This function handles navigation with screenshot capture
+    async function navigateToUrl(url) {
+        console.log('Attempting to navigate to:', url);
+        try {
+            // First get the active tab
+            const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+            
+            // Prepare the full URL
+            const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+            
+            // Add status message
+            addToChat(`Navigating to ${url}...`, 'assistant');
+            
+            // Perform the navigation
+            await chrome.tabs.update(tab.id, {url: fullUrl});
+            
+            // Wait for page load
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Capture and show screenshot
+            const screenshotSuccess = await captureAndShowScreenshot();
+            
+            // Add completion message
+            if (screenshotSuccess) {
+                addToChat(`Successfully loaded ${url}`, 'assistant');
+            }
+        } catch (error) {
+            console.error('Navigation failed:', error);
+            addToChat(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    // This function processes user commands
+    async function handleCommand(userInput) {
+        console.log('Processing command:', userInput);
+        addToChat(userInput);
+
+        // Parse and execute the command
+        if (userInput.toLowerCase().includes('go to')) {
+            const url = userInput.split('go to ')[1].trim();
+            await navigateToUrl(url);
+        } else {
+            addToChat("I understand only 'go to' commands for now", 'assistant');
+        }
+    }
+
+    // Set up event listeners for user interaction
+    button.addEventListener('click', () => {
+        console.log('Send button clicked');
+        const userInput = input.value.trim();
+        if (userInput) {
+            input.value = '';
+            handleCommand(userInput);
+        }
+    });
+
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && this.value.trim()) {
+            console.log('Enter key pressed');
+            e.preventDefault();
+            const userInput = this.value.trim();
+            this.value = '';
+            handleCommand(userInput);
+        }
+    });
+
+    // Show initialization message
+    addToChat('Ready! Try typing "go to google.com"', 'assistant');
+    console.log('Extension initialized with screenshot capability');
 });
