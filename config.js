@@ -8,9 +8,14 @@ const config = {
         }
     },
     
-    // UI-TARS configuration
+    // UI-TARS configuration for port 8001
     uiTars: {
-        endpoint: 'http://localhost:8000/v1/chat/completions'
+        endpoint: 'http://localhost:8001/v1/chat/completions'
+    },
+    
+    // PDF service configuration for port 8002
+    pdfService: {
+        endpoint: 'http://localhost:8002/generate-pdf'
     },
     
     // Debug mode for detailed logging

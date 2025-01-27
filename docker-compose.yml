@@ -4,7 +4,7 @@ services:
       context: ./ui-tars
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./ui-tars-7b-dpo:/models/ui-tars-7b-dpo
     restart: unless-stopped
@@ -14,7 +14,7 @@ services:
       context: ./pdf-service
       dockerfile: Dockerfile
     ports:
-      - "8001:8000"
+      - "8002:8000"
     volumes:
       - ./reports:/app/reports
     depends_on:
