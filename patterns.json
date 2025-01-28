@@ -1,0 +1,114 @@
+{
+    "navigation": {
+        "patterns": [
+            {
+                "type": "direct",
+                "expressions": [
+                    "go to (?<url>[\\w.-]+\\.\\w{2,})",
+                    "navigate to (?<url>[\\w.-]+\\.\\w{2,})",
+                    "open (?<url>[\\w.-]+\\.\\w{2,})",
+                    "visit (?<url>[\\w.-]+\\.\\w{2,})"
+                ],
+                "priority": 1
+            }
+        ],
+        "context": {
+            "requires": [],
+            "provides": ["currentPage", "previousPage"]
+        }
+    },
+    "search": {
+        "patterns": [
+            {
+                "type": "compound",
+                "expressions": [
+                    "search for (?<query>['\"].*?['\"])",
+                    "look for (?<query>['\"].*?['\"])",
+                    "find (?<query>['\"].*?['\"])"
+                ],
+                "priority": 2
+            }
+        ],
+        "context": {
+            "requires": ["currentPage"],
+            "provides": ["searchQuery", "searchResults"]
+        }
+    },
+    "interaction": {
+        "patterns": [
+            {
+                "type": "action",
+                "expressions": [
+                    "click (?:on )?(?:the )?(?<element>.*?)(?: button)?",
+                    "select (?:the )?(?<element>.*?)",
+                    "choose (?:the )?(?<element>.*?)"
+                ],
+                "priority": 3
+            },
+            {
+                "type": "input",
+                "expressions": [
+                    "type (?<text>['\"].*?['\"])(?:| into (?:the )?(?<field>.*?))",
+                    "enter (?<text>['\"].*?['\"])(?:| in(?:to)? (?:the )?(?<field>.*?))",
+                    "fill (?:in )?(?:the )?(?<field>.*?) with (?<text>['\"].*?['\"])"
+                ],
+                "priority": 3
+            }
+        ],
+        "context": {
+            "requires": ["currentPage", "elementContext"],
+            "provides": ["lastInteraction", "interactionResult"]
+        }
+    },
+    "verification": {
+        "patterns": [
+            {
+                "type": "check",
+                "expressions": [
+                    "verify (?:that )?(?<condition>.*?)",
+                    "check (?:if|that) (?<condition>.*?)",
+                    "confirm (?:that )?(?<condition>.*?)"
+                ],
+                "priority": 4
+            }
+        ],
+        "context": {
+            "requires": ["currentPage", "lastInteraction"],
+            "provides": ["verificationResult"]
+        }
+    },
+    "sequence": {
+        "connectors": [
+            "and",
+            "then",
+            "after that",
+            "next",
+            "finally"
+        ],
+        "conditions": [
+            "if",
+            "when",
+            "after",
+            "before",
+            "unless"
+        ]
+    },
+    "ecommerce": {
+        "patterns": [
+            {
+                "type": "product",
+                "expressions": [
+                    "add (?:to )?(?:the )?cart",
+                    "purchase",
+                    "buy",
+                    "checkout"
+                ],
+                "priority": 5
+            }
+        ],
+        "context": {
+            "requires": ["currentPage", "productContext"],
+            "provides": ["cartStatus"]
+        }
+    }
+}

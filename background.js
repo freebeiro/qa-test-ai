@@ -1,48 +1,36 @@
-// This script runs in the background and manages state between popup refreshes
-let activeTestSession = null;
+// State management for testing session
+let testingSession = { steps: [] };
 
-// Listen for messages from the popup
+// Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('Background received message:', message);
+
     if (message.type === 'STORE_SESSION') {
-        // Store the current test session
-        activeTestSession = message.data;
+        testingSession = message.data;
+        
+        // Notify all popup instances of the update
+        chrome.runtime.sendMessage({
+            type: 'SESSION_UPDATED',
+            session: testingSession
+        });
+        
         sendResponse({ success: true });
+    } 
+    else if (message.type === 'GET_SESSION') {
+        sendResponse({ session: testingSession });
     }
     
-    if (message.type === 'GET_SESSION') {
-        // Return the stored session
-        sendResponse({ session: activeTestSession });
-    }
-
-    // Keep the message channel open for async responses
+    // Required for async response
     return true;
 });
 
-// Listen for tab updates to handle navigation
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && activeTestSession) {
-        try {
-            // Capture screenshot after navigation
-            const screenshot = await chrome.tabs.captureVisibleTab(null, {
-                format: 'png',
-                quality: 100
-            });
-
-            // Store the screenshot in the session
-            if (activeTestSession.steps.length > 0) {
-                activeTestSession.steps[activeTestSession.steps.length - 1].screenshot = screenshot;
-            }
-
-            // Notify the popup of the update if it's open
-            chrome.runtime.sendMessage({
-                type: 'SESSION_UPDATED',
-                data: activeTestSession
-            }).catch(() => {
-                // Popup might be closed, which is expected
-                console.log('Popup not available to receive update');
-            });
-        } catch (error) {
-            console.error('Error handling tab update:', error);
-        }
+// Handle tab updates for screenshot capture
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete') {
+        // Notify popup that navigation is complete
+        chrome.runtime.sendMessage({
+            type: 'NAVIGATION_COMPLETE',
+            url: tab.url
+        });
     }
 });
