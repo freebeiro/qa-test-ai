@@ -1,51 +1,48 @@
-// background.js
+// This script runs in the background and manages state between popup refreshes
+let activeTestSession = null;
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  if (request.action === "executeInstruction") {
-    const instruction = request.instruction;
-    executeMidsceneInstruction(instruction)
-      .then(response => sendResponse({ result: "success", data: response }))
-      .catch(error => sendResponse({ result: "error", error: error.message }));
-    return true; // Indicate we will send a response asynchronously
-  }
+// Listen for messages from the popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'STORE_SESSION') {
+        // Store the current test session
+        activeTestSession = message.data;
+        sendResponse({ success: true });
+    }
+    
+    if (message.type === 'GET_SESSION') {
+        // Return the stored session
+        sendResponse({ session: activeTestSession });
+    }
+
+    // Keep the message channel open for async responses
+    return true;
 });
 
-async function executeMidsceneInstruction(instruction) {
-  const midsceneApiUrl = "http://localhost:5800/api/automate"; // Use port 5800 as per feedback
+// Listen for tab updates to handle navigation
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && activeTestSession) {
+        try {
+            // Capture screenshot after navigation
+            const screenshot = await chrome.tabs.captureVisibleTab(null, {
+                format: 'png',
+                quality: 100
+            });
 
-  try {
-    const response = await fetch(midsceneApiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ instruction: instruction })
-    });
+            // Store the screenshot in the session
+            if (activeTestSession.steps.length > 0) {
+                activeTestSession.steps[activeTestSession.steps.length - 1].screenshot = screenshot;
+            }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+            // Notify the popup of the update if it's open
+            chrome.runtime.sendMessage({
+                type: 'SESSION_UPDATED',
+                data: activeTestSession
+            }).catch(() => {
+                // Popup might be closed, which is expected
+                console.log('Popup not available to receive update');
+            });
+        } catch (error) {
+            console.error('Error handling tab update:', error);
+        }
     }
-
-    const data = await response.json();
-    console.log("Midscene API Response:", data); // Log the response for debugging
-
-    // Assuming Midscene returns an actionPlan in the response
-    if (data.actionPlan) {
-      // Execute the action plan using Midscene's Chrome Extension bridge (if available)
-      if (typeof window !== 'undefined' && window.Midscene) { // Check if Midscene bridge is available in the background script (it might not be)
-        console.log("Executing action plan using Midscene bridge (background script - might not work):", data.actionPlan);
-        // window.Midscene.execute(data.actionPlan); // This might not work in background script
-        return { message: "Action plan received", actionPlan: data.actionPlan }; // Return action plan to popup to execute in popup.js
-      } else {
-        console.log("Midscene bridge not available in background script.");
-        return { message: "Action plan received, Midscene bridge not available in background script", actionPlan: data.actionPlan }; // Return action plan to popup
-      }
-    } else {
-      return { message: "No action plan received from Midscene", data: data };
-    }
-
-  } catch (error) {
-    console.error("Error executing Midscene instruction:", error);
-    throw error;
-  }
-}
+});

@@ -12,6 +12,7 @@ ui-tars-venv/
 ui-tars-env/
 
 # Models & large files
+ui-tars/ui-tars-7b-dpo/
 ui-tars-7b-dpo/
 **/models/
 *.bin
@@ -19,6 +20,8 @@ ui-tars-7b-dpo/
 *.pth
 *.onnx
 *.safetensors
+*.safetensors.index.json
+model-*.safetensors
 
 # Test outputs
 *.pdf

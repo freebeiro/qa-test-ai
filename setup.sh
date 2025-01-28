@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Make scripts executable
+chmod +x download_model.sh
+
+# Download model if needed
+./download_model.sh
+
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
     echo "Docker is not installed. Please install Docker first."
