@@ -1,13 +1,13 @@
 import config from './config.js';
-import CommandProcessor from './command_processor.js';
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize our UI elements
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');
     const button = document.getElementById('sendButton');
-    
-    // Initialize our command processor with configuration
-    const commandProcessor = new CommandProcessor(config);
+    const pdfButton = document.getElementById('generatePdfButton');
+
+    // Store test steps for our documentation
     let testSteps = [];
 
     function addToChat(message, type = 'user') {
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function captureAndShowScreenshot() {
         console.log('Attempting to capture screenshot...');
         try {
-            // Wait for any page changes to settle
+            // Wait for any animations or page changes to settle
             await new Promise(resolve => setTimeout(resolve, 2000));
             
             const screenshot = await chrome.tabs.captureVisibleTab(null, {
@@ -85,14 +85,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function handleNavigation(action, tab) {
+        // The key fix: keep popup open during navigation
         const url = action.parameters.url.startsWith('http') ? 
             action.parameters.url : `https://${action.parameters.url}`;
         
         addToChat(`Navigating to ${action.parameters.url}...`, 'assistant');
         
-        // Start navigation and wait for it to complete
+        // Execute navigation in the background
         await chrome.tabs.update(tab.id, {url});
         
+        // Wait for navigation to complete
         await new Promise(resolve => {
             chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
                 if (tabId === tab.id && info.status === 'complete') {
@@ -111,35 +113,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         addToChat(`Searching for "${searchQuery}"...`, 'assistant');
 
         try {
-            // Get the page DOM for UI-TARS to analyze
+            // Get current page DOM content
             const [{result: domContent}] = await chrome.scripting.executeScript({
                 target: {tabId: tab.id},
                 function: () => document.documentElement.outerHTML
             });
 
-            // Let UI-TARS analyze the page and create an interaction plan
-            const analysis = await commandProcessor.uiTars.analyze('search', domContent, {
+            // Execute search using UI-TARS
+            const searchResult = await executeUITarsCommand({
                 type: 'search',
-                parameters: { searchQuery }
+                query: searchQuery,
+                dom: domContent
             });
 
-            // Execute the interaction plan
-            const result = await commandProcessor.uiTars.executePlan(analysis, {
-                tabId: tab.id,
-                value: searchQuery
-            });
-
-            // Capture the result
             await captureAndShowScreenshot();
-            
-            if (result.success) {
-                addToChat(`Successfully searched for "${searchQuery}"`, 'assistant');
-            } else {
-                throw new Error('Search execution failed');
-            }
+            addToChat(`Completed search for "${searchQuery}"`, 'assistant');
         } catch (error) {
-            console.error('Search operation failed:', error);
-            addToChat(`Failed to execute search: ${error.message}`, 'error');
+            throw new Error(`Search failed: ${error.message}`);
         }
     }
 
@@ -148,11 +138,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         addToChat(userInput);
 
         try {
-            // Process the command through our intelligent system
-            const { actions } = await commandProcessor.processCommand(userInput);
+            // Extract navigation commands directly
+            const navigationMatch = userInput.match(/^(?:go to|navigate to|open|visit)\s+([^\s]+)/i);
+            if (navigationMatch) {
+                await executeAction({
+                    type: 'navigation',
+                    parameters: {
+                        url: navigationMatch[1]
+                    }
+                });
+                return;
+            }
+
+            // Handle other commands through UI-TARS
+            const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+            const [{result: domContent}] = await chrome.scripting.executeScript({
+                target: {tabId: tab.id},
+                function: () => document.documentElement.outerHTML
+            });
+
+            const actionPlan = await getUITarsResponse(userInput, domContent);
             
-            // Execute each action in sequence
-            for (const action of actions) {
+            for (const action of actionPlan.actions) {
                 await executeAction(action);
             }
         } catch (error) {
@@ -161,6 +168,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Event listeners for user interactions
     button.addEventListener('click', () => {
         console.log('Send button clicked');
         const userInput = input.value.trim();
@@ -179,6 +187,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    // Initialize with a helpful message
-    addToChat('Ready! I can help with navigation and search on any website. Try commands like "go to google.com" or "search for \'test\'"', 'assistant');
+    // Initialize
+    addToChat('Ready! Try commands like "go to google.com" or "search for \'web testing\'"', 'assistant');
 });
