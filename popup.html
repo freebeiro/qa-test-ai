@@ -7,6 +7,17 @@
             width: 400px;
             padding: 20px;
             font-family: system-ui;
+            position: relative;
+        }
+        #versionInfo {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 10px;
+            color: #666;
+            background: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
         }
         #chat { 
             height: 400px;
@@ -23,13 +34,35 @@
         .user { background: #e3f2fd; }
         .assistant { background: #f5f5f5; }
         .error { background: #ffebee; }
+
+        /* Input container with loading state */
+        .input-container {
+            position: relative;
+            margin-bottom: 10px;
+        }
         #input {
             width: 100%;
             padding: 8px;
-            margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            padding-right: 30px; /* Space for loading spinner */
         }
+        /* Loading spinner for input */
+        .input-container.loading::after {
+            content: '';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ccc;
+            border-top-color: #2196f3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Button styles with loading state */
         #sendButton {
             width: 100%;
             padding: 8px;
@@ -38,12 +71,74 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        #sendButton:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        /* Loading spinner for button */
+        #sendButton.loading {
+            padding-right: 40px; /* Space for spinner */
+        }
+        #sendButton.loading::after {
+            content: '';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Loading spinner animation */
+        @keyframes spin {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        /* Loading overlay for screenshots */
+        .screenshot {
+            position: relative;
+        }
+        .screenshot.loading::before {
+            content: 'Capturing...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            z-index: 1;
+        }
+        .screenshot.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 3px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 2;
         }
     </style>
 </head>
 <body>
+    <div id="versionInfo"></div>
     <div id="chat"></div>
-    <input type="text" id="input" placeholder="Enter command (e.g., 'go to google.com')">
+    <div class="input-container">
+        <input type="text" id="input" placeholder="Enter command (e.g., 'go to google.com')">
+    </div>
     <button id="sendButton">Send</button>
     <script src="popup.js" type="module"></script>
 </body>

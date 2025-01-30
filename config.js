@@ -1,7 +1,7 @@
 const config = {
-    // DeepSeek R1 configuration
+    // DeepSeek R1 configuration (moved to environment variables file)
     deepseek: {
-        apiKey: 'sk-efa7452956d74dc0b562792594062c17',
+        // API key should be loaded from chrome.storage or similar
         endpoints: {
             reason: 'https://api.deepseek.com/v1/reason',
             chat: 'https://api.deepseek.com/v1/chat'

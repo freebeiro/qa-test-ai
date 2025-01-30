@@ -1,36 +1,121 @@
-// State management for testing session
-let testingSession = { steps: [] };
+// State tracking
+let activeTabId = null;
+let connections = new Map();
+let isInitialized = false;
+
+// Initialize on install/update
+chrome.runtime.onInstalled.addListener(() => {
+    console.log('Extension installed/updated');
+    initialize();
+});
+
+// Initialize on startup
+chrome.runtime.onStartup.addListener(() => {
+    console.log('Extension starting up');
+    initialize();
+});
+
+async function initialize() {
+    if (isInitialized) return;
+    
+    try {
+        // Get active tab on startup
+        const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+        if (tab) {
+            activeTabId = tab.id;
+            console.log('Initial active tab:', activeTabId);
+        }
+        isInitialized = true;
+    } catch (error) {
+        console.error('Initialization failed:', error);
+    }
+}
+
+// Handle connection from popup
+chrome.runtime.onConnect.addListener((port) => {
+    console.log('New connection:', port.name);
+
+    if (port.name === 'popup-port') {
+        const connectionId = Date.now();
+        connections.set(connectionId, port);
+
+        // Send initial state
+        if (activeTabId) {
+            port.postMessage({
+                type: 'INIT_STATE',
+                activeTabId: activeTabId
+            });
+        }
+
+        port.onDisconnect.addListener(() => {
+            console.log('Connection closed:', connectionId);
+            connections.delete(connectionId);
+        });
+    }
+});
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Background received message:', message);
+    console.log('Received message:', message);
 
-    if (message.type === 'STORE_SESSION') {
-        testingSession = message.data;
-        
-        // Notify all popup instances of the update
-        chrome.runtime.sendMessage({
-            type: 'SESSION_UPDATED',
-            session: testingSession
-        });
-        
-        sendResponse({ success: true });
-    } 
-    else if (message.type === 'GET_SESSION') {
-        sendResponse({ session: testingSession });
+    switch (message.type) {
+        case 'SET_ACTIVE_TAB':
+            activeTabId = message.tabId;
+            console.log('Active tab set:', activeTabId);
+            notifyPopups({
+                type: 'TAB_ACTIVATED',
+                tabId: activeTabId
+            });
+            sendResponse({ success: true });
+            break;
+
+        case 'NAVIGATION_START':
+            console.log('Navigation started:', message.url);
+            notifyPopups({
+                type: 'NAV_STARTED',
+                url: message.url
+            });
+            sendResponse({ success: true });
+            break;
     }
-    
-    // Required for async response
     return true;
 });
 
-// Handle tab updates for screenshot capture
+// Track tab updates
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete') {
-        // Notify popup that navigation is complete
-        chrome.runtime.sendMessage({
-            type: 'NAVIGATION_COMPLETE',
+    console.log('Tab updated:', tabId, changeInfo.status, 'Active:', activeTabId);
+    
+    if (tabId === activeTabId) {
+        // Notify all connected popups
+        notifyPopups({
+            type: 'TAB_UPDATED',
+            status: changeInfo.status,
             url: tab.url
         });
     }
 });
+
+// Track active tab changes
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    activeTabId = activeInfo.tabId;
+    console.log('Active tab changed:', activeTabId);
+    
+    const tab = await chrome.tabs.get(activeTabId);
+    notifyPopups({
+        type: 'TAB_ACTIVATED',
+        tabId: activeTabId,
+        url: tab.url
+    });
+});
+
+// Helper to notify all connected popups
+function notifyPopups(message) {
+    for (let [id, port] of connections) {
+        try {
+            port.postMessage(message);
+        } catch (error) {
+            console.log('Failed to notify popup:', id, error);
+            connections.delete(id);
+        }
+    }
+}

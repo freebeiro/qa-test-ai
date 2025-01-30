@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "QA Testing Assistant",
-  "version": "1.0",
+  "version": "1.0.1",
   "description": "AI-powered QA testing automation with natural language understanding",
   
   "permissions": [
@@ -17,16 +17,9 @@
   "action": {
     "default_popup": "popup.html"
   },
-  
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  },
 
-  "web_accessible_resources": [{
-    "resources": [
-      "patterns.json",
-      "actions.json"
-    ],
-    "matches": ["<all_urls>"]
-  }]
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
 }
