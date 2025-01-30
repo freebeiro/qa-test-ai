@@ -1,166 +1,166 @@
-# QA Testing Assistant Chrome Extension
+# QA Testing Assistant with Vision-Language AI
 
-This Chrome extension provides an intelligent interface for automated QA testing using natural language commands. It combines AI capabilities with browser automation to create comprehensive test documentation with minimal effort.
+The QA Testing Assistant is an innovative Chrome extension that revolutionizes web testing by combining vision-language AI with natural language processing. Built on ByteDance's UI-TARS model, it understands both visual and textual aspects of web pages, enabling testers to conduct sophisticated testing through simple conversational commands.
 
-## Features
+## Understanding How It Works
 
-The QA Testing Assistant offers several powerful features that streamline the testing process:
+Our system operates like an experienced QA tester who can both see and understand web pages. When you give it a command like "click the login button," it:
 
-- Natural language command interpretation
-- Automated browser interaction
-- Automatic screenshot capture
-- PDF report generation
-- Intelligent context understanding
-- Step-by-step test documentation
+1. Captures a screenshot of the current page
+2. Analyzes the visual layout and structure
+3. Understands the relationships between elements
+4. Executes precise actions based on visual context
+5. Documents everything automatically
+
+This approach is fundamentally different from traditional automation tools because it understands web pages the way humans do, combining visual and textual information to make intelligent decisions.
+
+## Key Features
+
+Our QA Testing Assistant brings several innovative capabilities to web testing:
+
+- **Natural Language Control**: Issue commands in plain English, just as you would instruct another person.
+- **Visual Understanding**: The system sees and understands webpage layouts, making it more reliable than traditional selector-based automation.
+- **Intelligent Navigation**: Automatically handles complex workflows by understanding the visual context of web pages.
+- **Automatic Documentation**: Captures screenshots and generates comprehensive test reports automatically.
+- **Error Recovery**: Uses visual understanding to adapt when elements change or move on the page.
+
+## Technical Architecture
+
+The system is built on three main components:
+
+1. **Chrome Extension Frontend**:
+   - Provides an intuitive chat-like interface
+   - Captures high-quality screenshots
+   - Manages browser interactions
+   - Handles real-time feedback
+
+2. **UI-TARS Vision-Language Service** (Port 8001):
+   - Processes both visual and textual inputs
+   - Analyzes webpage structure
+   - Plans and executes interactions
+   - Provides intelligent error recovery
+
+3. **PDF Documentation Service** (Port 8002):
+   - Generates comprehensive test reports
+   - Includes annotated screenshots
+   - Documents test steps and results
+   - Maintains session history
 
 ## Prerequisites
 
-Before installing the extension, ensure you have the following prerequisites installed:
+Before installing the QA Testing Assistant, ensure you have:
 
-- Docker Desktop (latest version)
-- Google Chrome Browser
-- Git (for cloning the repository)
+- Docker Desktop installed and running
+- Google Chrome Browser (latest version)
+- Git with LFS support enabled
+- At least 16GB of RAM (24GB recommended)
+- 20GB of free disk space
 
 ## Installation
 
-### 1. Clone the Repository
-
-```bash
+1. Clone the repository:
+\`\`\`bash
 git clone <repository-url>
 cd chrome_extension_for_qa_testing_9lhj5c
-```
+\`\`\`
 
-### 2. Configure Docker Services
-
-The extension relies on two Docker services:
-- UI-TARS Service (Port 8001): Handles command interpretation and execution
-- PDF Generation Service (Port 8002): Creates test documentation reports
-
-Docker services are configured through docker-compose.yml and will be started automatically by the setup script.
-
-### 3. Start the Services
-
-Run the setup script to initialize all required services:
-
-```bash
+2. Run the setup script:
+\`\`\`bash
 chmod +x setup.sh
 ./setup.sh
-```
+\`\`\`
 
-This script will:
-- Check for Docker installation
-- Create necessary directories
-- Build and start both Docker containers
-- Configure the services on the correct ports
+The setup process will:
+- Verify system requirements
+- Download the UI-TARS vision-language model
+- Configure Docker services
+- Prepare the extension environment
 
-### 4. Install the Chrome Extension
+## Loading the Extension
 
-1. Open Google Chrome
-2. Navigate to `chrome://extensions/`
-3. Enable "Developer mode" using the toggle in the top-right corner
-4. Click "Load unpacked"
-5. Navigate to the project directory and select it
+1. Open Chrome and navigate to \`chrome://extensions/\`
+2. Enable "Developer mode" in the top right
+3. Click "Load unpacked" and select the project directory
+4. The QA Testing Assistant icon will appear in your toolbar
 
-## Usage
+## Using the Assistant
 
-### Basic Operation
+The QA Testing Assistant supports various types of commands:
 
-1. Navigate to any webpage (not a chrome:// page)
-2. Click the extension icon in your Chrome toolbar
-3. Enter commands in natural language in the chat interface
-4. Watch as the extension executes your commands and captures screenshots
-5. Generate a PDF report when your testing session is complete
+1. **Basic Navigation**:
+   \`\`\`
+   "Go to example.com"
+   "Navigate to the login page"
+   \`\`\`
 
-### Command Examples
+2. **Intelligent Interactions**:
+   \`\`\`
+   "Click the submit button near the email field"
+   "Find the search box and type 'test query'"
+   \`\`\`
 
-The extension understands various types of commands:
+3. **Complex Workflows**:
+   \`\`\`
+   "Log in using test@example.com and password123"
+   "Add the first item from the search results to the cart"
+   \`\`\`
 
-- Navigation: "go to example.com"
-- Interaction: "click the login button"
-- Form Filling: "type 'test@example.com' into the email field"
-- Verification: "check if the error message appears"
+## Development and Customization
 
-### PDF Report Generation
+The system is designed for extensibility:
 
-After completing your test steps, click the "Generate PDF" button to create a comprehensive report including:
-- All executed commands
-- Screenshots of each step
-- Timestamps and results
-- Any additional context or notes provided
+1. **Model Configuration**:
+   - UI-TARS model settings in \`ui-tars/ui-tars-7b-dpo/\`
+   - Vision processing parameters in \`preprocessor_config.json\`
 
-## Directory Structure
+2. **Docker Services**:
+   - UI-TARS service on port 8001
+   - PDF Generator on port 8002
+   - Configuration in \`docker-compose.yml\`
 
-```
-project/
-├── manifest.json          # Extension configuration
-├── popup.html            # Extension interface
-├── popup.js              # Core extension logic
-├── content.js            # Page interaction scripts
-├── background.js         # Background processes
-├── docker-compose.yml    # Service orchestration
-├── ui-tars/             # UI-TARS service
-└── pdf-service/         # PDF generation service
-```
+3. **Extension Components**:
+   - Frontend interface in \`popup.js\`
+   - Command processing in \`command_processor.js\`
+   - Background services in \`background.js\`
 
 ## Troubleshooting
 
-### Common Issues
+If you encounter issues:
 
-1. If Docker services fail to start:
-   ```bash
+1. **Check Services**:
+   \`\`\`bash
+   docker-compose logs -f ui-tars
+   \`\`\`
+
+2. **Verify Model**:
+   \`\`\`bash
+   ./verify_model.sh
+   \`\`\`
+
+3. **Reset System**:
+   \`\`\`bash
    docker-compose down
+   docker system prune -f
    docker-compose up --build -d
-   ```
-
-2. If the extension can't connect to services:
-   - Verify ports 8001 and 8002 are not in use
-   - Check Docker containers are running: `docker-compose ps`
-   - Review Docker logs: `docker-compose logs`
-
-3. For permission issues with Docker:
-   - Open Docker Desktop
-   - Go to Settings → Resources → File Sharing
-   - Add the project directory to shared paths
-
-### Port Configuration
-
-The services use the following ports:
-- UI-TARS: 8001 (external) → 8000 (internal)
-- PDF Service: 8002 (external) → 8000 (internal)
-
-## Best Practices
-
-1. Always start with a clear webpage before using commands
-2. Use specific, clear commands for best results
-3. Allow time for page loading between actions
-4. Review screenshots to ensure actions completed correctly
-5. Generate PDF reports after completing related test scenarios
-
-## Security Notes
-
-The extension requires certain permissions to function:
-- activeTab: For interacting with the current tab
-- scripting: For executing commands
-- host permissions: For navigating to websites
-
-## Development
-
-For developers looking to modify or enhance the extension:
-
-1. Service Endpoints:
-   - UI-TARS API: http://localhost:8001/v1/chat/completions
-   - PDF Service: http://localhost:8002/generate-pdf
-
-2. Key Files:
-   - popup.js: Main extension logic
-   - config.js: Service configuration
-   - ui_tars_server.py: UI-TARS service implementation
-   - pdf_server.py: PDF generation service
-
-## License
-
-[License details here]
+   \`\`\`
 
 ## Contributing
 
-[Contribution guidelines here]
+We welcome contributions! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request with detailed description
+4. Ensure all tests pass
+
+## License
+
+[Your License Information]
+
+## Acknowledgments
+
+This project builds upon:
+- ByteDance's UI-TARS vision-language model
+- Chrome Extension APIs
+- Docker containerization
+- FastAPI web framework

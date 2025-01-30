@@ -1,51 +1,64 @@
-// background.js
+// State tracking
+let browserTabId = null;  // The tab we're controlling
+let qaWindow = null;      // Our chat window
+let activePort = null;    // Connection to chat window
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  if (request.action === "executeInstruction") {
-    const instruction = request.instruction;
-    executeMidsceneInstruction(instruction)
-      .then(response => sendResponse({ result: "success", data: response }))
-      .catch(error => sendResponse({ result: "error", error: error.message }));
-    return true; // Indicate we will send a response asynchronously
-  }
+// Handle extension icon click
+chrome.action.onClicked.addListener(async (tab) => {
+    browserTabId = tab.id;
+    console.log('Target browser tab:', browserTabId);
+
+    if (qaWindow) {
+        chrome.windows.update(qaWindow.id, {
+            focused: true,
+            drawAttention: true
+        });
+        return;
+    }
+
+    const window = await chrome.windows.create({
+        url: 'popup.html',
+        type: 'popup',
+        width: 450,
+        height: 600,
+        left: 50,
+        top: 50
+    });
+    
+    qaWindow = window;
+
+    chrome.windows.onRemoved.addListener((windowId) => {
+        if (qaWindow && windowId === qaWindow.id) {
+            qaWindow = null;
+        }
+    });
 });
 
-async function executeMidsceneInstruction(instruction) {
-  const midsceneApiUrl = "http://localhost:5800/api/automate"; // Use port 5800 as per feedback
+// Handle connections from the QA window
+chrome.runtime.onConnect.addListener(function(port) {
+    if (port.name === "qa-window") {
+        console.log('QA Window connected');
+        activePort = port;
 
-  try {
-    const response = await fetch(midsceneApiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ instruction: instruction })
-    });
+        port.postMessage({
+            type: 'INIT_STATE',
+            browserTabId: browserTabId
+        });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        port.onDisconnect.addListener(() => {
+            console.log('QA Window disconnected');
+            activePort = null;
+        });
     }
+});
 
-    const data = await response.json();
-    console.log("Midscene API Response:", data); // Log the response for debugging
-
-    // Assuming Midscene returns an actionPlan in the response
-    if (data.actionPlan) {
-      // Execute the action plan using Midscene's Chrome Extension bridge (if available)
-      if (typeof window !== 'undefined' && window.Midscene) { // Check if Midscene bridge is available in the background script (it might not be)
-        console.log("Executing action plan using Midscene bridge (background script - might not work):", data.actionPlan);
-        // window.Midscene.execute(data.actionPlan); // This might not work in background script
-        return { message: "Action plan received", actionPlan: data.actionPlan }; // Return action plan to popup to execute in popup.js
-      } else {
-        console.log("Midscene bridge not available in background script.");
-        return { message: "Action plan received, Midscene bridge not available in background script", actionPlan: data.actionPlan }; // Return action plan to popup
-      }
-    } else {
-      return { message: "No action plan received from Midscene", data: data };
+// Track tab updates
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (tabId === browserTabId && activePort) {
+        activePort.postMessage({
+            type: 'TAB_UPDATED',
+            status: changeInfo.status,
+            url: tab.url
+        });
     }
-
-  } catch (error) {
-    console.error("Error executing Midscene instruction:", error);
-    throw error;
-  }
-}
+});

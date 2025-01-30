@@ -1,0 +1,95 @@
+{
+  "browser_commands": {
+    "navigation": {
+      "open": {
+        "syntax": "open <url>",
+        "description": "Opens a given URL in the browser",
+        "parameters": ["url"],
+        "example": "open https://www.google.com"
+      },
+      "back": {
+        "syntax": "back",
+        "description": "Navigates back in the browser history",
+        "parameters": [],
+        "example": "back"
+      },
+      "forward": {
+        "syntax": "forward",
+        "description": "Navigates forward in the browser history",
+        "parameters": [],
+        "example": "forward"
+      },
+      "refresh": {
+        "syntax": "refresh",
+        "description": "Reloads the current webpage",
+        "parameters": [],
+        "example": "refresh"
+      }
+    },
+    "scrolling": {
+      "scroll": {
+        "syntax": "scroll <direction>",
+        "description": "Scrolls the current webpage up or down",
+        "parameters": ["direction"],
+        "valid_values": ["up", "down"],
+        "example": "scroll down"
+      }
+    },
+    "tab_management": {
+      "switch_tab": {
+        "syntax": "switch to <tab_name>",
+        "description": "Switches to a specific browser tab by name",
+        "parameters": ["tab_name"],
+        "example": "switch to tab_2"
+      },
+      "close_tab": {
+        "syntax": "close tab",
+        "description": "Closes the currently active tab",
+        "parameters": [],
+        "example": "close tab"
+      },
+      "new_tab": {
+        "syntax": "new tab",
+        "description": "Opens a new tab in the browser",
+        "parameters": [],
+        "example": "new tab"
+      }
+    },
+    "interaction": {
+      "type": {
+        "syntax": "type <text>",
+        "description": "Types the specified text into the active input field",
+        "parameters": ["text"],
+        "example": "type Hello, how are you?"
+      },
+      "click": {
+        "syntax": "click <element_identifier>",
+        "description": "Clicks on an element on the webpage",
+        "parameters": ["element_identifier"],
+        "example": "click submit_button"
+      }
+    }
+  },
+  "command_processing": {
+    "natural_language_mapping": {
+      "navigation": [
+        "go to",
+        "navigate to",
+        "open",
+        "visit"
+      ],
+      "clicking": [
+        "click",
+        "press",
+        "select",
+        "choose"
+      ],
+      "typing": [
+        "type",
+        "enter",
+        "input",
+        "fill"
+      ]
+    }
+  }
+}

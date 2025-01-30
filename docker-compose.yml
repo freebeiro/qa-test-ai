@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   ui-tars:
     build: 
@@ -6,7 +8,22 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - ./ui-tars-7b-dpo:/models/ui-tars-7b-dpo
+      - ./ui-tars/ui-tars-7b-dpo:/models/ui-tars-7b-dpo
+    environment:
+      - PYTORCH_ENABLE_MPS_FALLBACK=1  # Helps with Mac Metal support but harmless on other platforms
+      - PYTHONUNBUFFERED=1  # Ensures logs are output immediately
+      - TIMEOUT=300  # Generous timeout for model loading
+    deploy:
+      resources:
+        limits:
+          memory: 8GB  # Conservative memory limit that works on most systems
+        reservations:
+          memory: 4GB  # Minimum memory needed
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
   pdf-generator:
