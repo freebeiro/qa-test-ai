@@ -19,11 +19,18 @@ class CommandProcessor {
 
     parseCommand(input) {
         const commands = [
+            // Navigation commands first to prevent URL matching
             {
                 type: 'back',
                 pattern: /^(?:go\s+)?back$/i,
                 handler: () => ({ type: 'back' })
             },
+            {
+                type: 'forward',
+                pattern: /^(?:go\s+)?forward$/i,
+                handler: () => ({ type: 'forward' })
+            },
+            // Then other commands
             {
                 type: 'navigation',
                 pattern: /^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i,
@@ -43,11 +50,6 @@ class CommandProcessor {
                 type: 'scroll',
                 pattern: /^scroll\s+(up|down|top|bottom)$/i,
                 handler: (match) => ({ type: 'scroll', direction: match[1] })
-            },
-            {
-                type: 'forward',
-                pattern: /^(?:go\s+)?forward$/i,
-                handler: () => ({ type: 'forward' })
             },
             {
                 type: 'refresh',
@@ -425,8 +427,27 @@ class QAInterface {
     }
 
     async handleForward() {
-        await chrome.tabs.goForward(this.browserTabId);
-        this.isNavigating = true;
+        try {
+            console.log('\u{27A1} Going forward');
+            this.addToChat('Going forward...', 'assistant');
+            this.isNavigating = true;
+            
+            // Get current tab history
+            const tab = await chrome.tabs.get(this.browserTabId);
+            
+            // Execute the forward command
+            await chrome.tabs.goForward(this.browserTabId);
+            
+            // Wait for navigation
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Take screenshot after navigation
+            await this.captureAndShowScreenshot();
+        } catch (error) {
+            console.error('\u{274C} Forward navigation failed:', error);
+            this.addToChat(`Forward navigation failed: ${error.message}`, 'error');
+            this.toggleUI(true);
+        }
     }
 
     async handleRefresh() {
@@ -468,6 +489,7 @@ class QAInterface {
 - "click on 'Login'"
 - "scroll down/up"
 - "go back"
+- "go forward"
 - "refresh"`, 'assistant');
     }
 }
