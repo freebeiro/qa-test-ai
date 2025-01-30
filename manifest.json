@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
   "name": "QA Testing Assistant",
-  "version": "1.0.1",
-  "description": "AI-powered QA testing automation with natural language understanding",
+  "version": "1.0",
+  "description": "Assistant for QA testing",
   
   "permissions": [
     "activeTab",
-    "scripting",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   
   "host_permissions": [
@@ -15,11 +15,21 @@
   ],
   
   "action": {
-    "default_title": "QA Testing Assistant"
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
 
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   }
 }

@@ -1,31 +1,24 @@
 // State tracking
-let browserTabId = null;  // The tab we're controlling
-let qaWindow = null;      // Our chat window
-let activePort = null;    // Connection to chat window
+let browserTabId = null;
+let qaWindow = null;
+let activePort = null;
 
-// Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
     browserTabId = tab.id;
-    console.log('Target browser tab:', browserTabId);
-
-    if (qaWindow) {
-        chrome.windows.update(qaWindow.id, {
-            focused: true,
-            drawAttention: true
-        });
-        return;
-    }
-
-    const window = await chrome.windows.create({
+    
+    // Get screen dimensions
+    const screen = window.screen;
+    const width = Math.min(600, screen.availWidth * 0.4);  // 40% of screen width, max 600px
+    const height = Math.min(800, screen.availHeight * 0.8);  // 80% of screen height, max 800px
+    
+    qaWindow = await chrome.windows.create({
         url: 'popup.html',
         type: 'popup',
-        width: 450,
-        height: 600,
-        left: 50,
-        top: 50
+        width: width,
+        height: height,
+        left: screen.availWidth - width - 20,  // 20px from right edge
+        top: 20  // 20px from top
     });
-    
-    qaWindow = window;
 
     chrome.windows.onRemoved.addListener((windowId) => {
         if (qaWindow && windowId === qaWindow.id) {
@@ -34,7 +27,6 @@ chrome.action.onClicked.addListener(async (tab) => {
     });
 });
 
-// Handle connections from the QA window
 chrome.runtime.onConnect.addListener(function(port) {
     if (port.name === "qa-window") {
         console.log('QA Window connected');
@@ -52,7 +44,6 @@ chrome.runtime.onConnect.addListener(function(port) {
     }
 });
 
-// Track tab updates
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (tabId === browserTabId && activePort) {
         activePort.postMessage({

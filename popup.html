@@ -2,82 +2,197 @@
 <html>
 <head>
     <title>QA Testing Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { 
+        :root {
+            --primary-color: #2196f3;
+            --bg-color: #f5f7fa;
+            --text-color: #333;
+            --border-radius: 12px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --padding: clamp(12px, 3vw, 20px);
+            --chat-height: clamp(300px, calc(100vh - 140px), 800px);
+        }
+
+        body {
             width: 100%;
+            min-width: 300px;
             height: 100vh;
             margin: 0;
-            padding: 20px;
-            font-family: system-ui;
+            padding: var(--padding);
             box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
             display: flex;
             flex-direction: column;
         }
+
         #versionInfo {
             position: absolute;
-            top: 5px;
-            right: 5px;
-            font-size: 10px;
+            top: var(--padding);
+            right: var(--padding);
+            font-size: clamp(10px, 2vw, 11px);
             color: #666;
-            background: #f5f5f5;
-            padding: 2px 5px;
-            border-radius: 3px;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 8px;
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
         }
-        #chat { 
+
+        #chat {
             flex: 1;
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
+            min-height: 0;  /* Important for flex child scrolling */
             overflow-y: auto;
+            margin-bottom: var(--padding);
+            padding: var(--padding);
             background: white;
-            border-radius: 4px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
         }
+
         .message {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 4px;
+            margin: 12px 0;
+            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
+            border-radius: var(--border-radius);
+            max-width: clamp(200px, 85%, 400px);
+            font-size: clamp(13px, 2vw, 14px);
+            animation: fadeIn 0.3s ease-out;
             word-wrap: break-word;
         }
-        .user { background: #e3f2fd; }
-        .assistant { background: #f5f5f5; }
-        .error { background: #ffebee; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user {
+            background: var(--primary-color);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant {
+            background: #e9ecef;
+            color: var(--text-color);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
 
         .input-container {
+            position: sticky;
+            bottom: 0;
+            margin-top: auto;
             display: flex;
             gap: 10px;
-            margin-bottom: 10px;
+            background: white;
+            padding: var(--padding);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
         }
+
         #input {
             flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+            min-width: 0;  /* Prevents flex item from overflowing */
+            min-height: 40px;
+            max-height: 120px;  /* Prevents too tall textbox */
+            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            font-size: clamp(13px, 2vw, 14px);
+            transition: all 0.2s ease;
+            font-family: inherit;
+            resize: vertical;  /* Allows vertical resizing */
+            overflow-y: auto;  /* Adds scrollbar when needed */
+            line-height: 1.4;  /* Better line spacing */
         }
+
+        #input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+        }
+
         #sendButton {
-            padding: 8px 16px;
-            background: #2196f3;
+            align-self: flex-end;  /* Aligns with bottom of textarea */
+            padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 24px);
+            height: 40px;  /* Match minimum height of textarea */
+            background: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            transition: all 0.3s ease;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            white-space: nowrap;
+            font-size: clamp(13px, 2vw, 14px);
         }
+
         #sendButton:hover {
             background: #1976d2;
+            transform: translateY(-1px);
         }
+
         #sendButton:disabled {
-            background: #ccc;
+            background: #cccccc;
             cursor: not-allowed;
+            transform: none;
         }
 
         .screenshot {
-            margin: 10px 0;
+            margin: clamp(10px, 3vw, 15px) 0;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
         }
+
         .screenshot img {
-            max-width: 100%;
-            border: 1px solid #ddd;
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: var(--border-radius);
+        }
+
+        /* Media Queries */
+        @media (max-width: 400px) {
+            body {
+                padding: 10px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+
+            #sendButton {
+                padding: 8px 16px;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: clamp(6px, 1.5vw, 8px);
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cfd8dc;
             border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b0bec5;
         }
     </style>
 </head>
@@ -85,9 +200,9 @@
     <div id="versionInfo"></div>
     <div id="chat"></div>
     <div class="input-container">
-        <input type="text" id="input" placeholder="Enter command (e.g., 'go to google.com')">
+        <textarea id="input" placeholder="Enter a command..." rows="1"></textarea>
         <button id="sendButton">Send</button>
     </div>
-    <script src="popup.js" type="module"></script>
+    <script src="popup.js"></script>
 </body>
 </html>
