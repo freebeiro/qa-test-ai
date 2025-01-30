@@ -184,14 +184,56 @@ class QAInterface {
         const searchResult = await chrome.scripting.executeScript({
             target: { tabId: this.browserTabId },
             function: (query) => {
-                const searchSelectors = [
+                // Define site-specific search selectors
+                const siteSearchSelectors = {
+                    'amazon': {
+                        selectors: ['#twotabsearchtextbox', '#nav-search-keywords'],
+                        submit: '#nav-search-submit-button'
+                    },
+                    'ebay': {
+                        selectors: ['#gh-ac', '.gh-tb'],
+                        submit: '#gh-btn'
+                    },
+                    // Add more site-specific selectors as needed
+                };
+
+                // Get current domain
+                const domain = window.location.hostname;
+                
+                // Check if we have specific selectors for this site
+                for (const [site, config] of Object.entries(siteSearchSelectors)) {
+                    if (domain.includes(site)) {
+                        // Try site-specific selectors
+                        for (const selector of config.selectors) {
+                            const searchInput = document.querySelector(selector);
+                            if (searchInput && searchInput.offsetParent !== null) {
+                                searchInput.value = query;
+                                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                
+                                // Try to find and click submit button
+                                if (config.submit) {
+                                    const submitButton = document.querySelector(config.submit);
+                                    if (submitButton) {
+                                        submitButton.click();
+                                        return { success: true, method: 'site-specific' };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Generic search selectors as fallback
+                const genericSelectors = [
                     'input[type="search"]',
                     'input[name*="search"]',
                     'input[name="q"]',
-                    '.search-input'
+                    '.search-input',
+                    'input[aria-label*="search" i]',
+                    'input[placeholder*="search" i]'
                 ];
 
-                for (const selector of searchSelectors) {
+                for (const selector of genericSelectors) {
                     const searchInput = document.querySelector(selector);
                     if (searchInput && searchInput.offsetParent !== null) {
                         searchInput.value = query;
@@ -200,7 +242,7 @@ class QAInterface {
                         const form = searchInput.closest('form');
                         if (form) {
                             form.submit();
-                            return { success: true };
+                            return { success: true, method: 'form' };
                         }
                         
                         searchInput.dispatchEvent(new KeyboardEvent('keypress', {
@@ -209,7 +251,7 @@ class QAInterface {
                             keyCode: 13,
                             bubbles: true
                         }));
-                        return { success: true };
+                        return { success: true, method: 'enter' };
                     }
                 }
                 return { success: false };
@@ -218,7 +260,17 @@ class QAInterface {
         });
 
         if (!searchResult[0].result.success) {
-            await this.handleNavigation(`google.com/search?q=${encodeURIComponent(query)}`);
+            // Only fallback to Google if we're not already on a major e-commerce site
+            const tab = await chrome.tabs.get(this.browserTabId);
+            const url = new URL(tab.url);
+            const majorSites = ['amazon', 'ebay', 'walmart', 'target'];
+            
+            if (!majorSites.some(site => url.hostname.includes(site))) {
+                await this.handleNavigation(`google.com/search?q=${encodeURIComponent(query)}`);
+            } else {
+                console.error('❌ Search failed on e-commerce site');
+                this.addToChat('Could not find search box on this page', 'error');
+            }
         }
     }
 
