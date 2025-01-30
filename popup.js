@@ -19,7 +19,7 @@ class CommandProcessor {
 
     parseCommand(input) {
         const commands = [
-            // Navigation commands first to prevent URL matching
+            // Navigation commands first
             {
                 type: 'back',
                 pattern: /^(?:go\s+)?back$/i,
@@ -30,17 +30,25 @@ class CommandProcessor {
                 pattern: /^(?:go\s+)?forward$/i,
                 handler: () => ({ type: 'forward' })
             },
-            // Then other commands
+            // Find command with strict pattern
+            {
+                type: 'find',
+                pattern: /^find\s+(?:text\s+)?(?:["']([^"']+)["']|(\S+(?:\s+\S+)*))$/i,
+                handler: (match) => ({ type: 'find', text: match[1] || match[2] })
+            },
+            // Navigation with specific pattern
             {
                 type: 'navigation',
                 pattern: /^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i,
                 handler: (match) => ({ type: 'navigation', url: match[1] })
             },
+            // Search with specific pattern
             {
                 type: 'search',
-                pattern: /^(?:search|find|look)(?:\s+for)?\s+['"]?([^'"]+)['"]?$/i,
+                pattern: /^search(?:\s+for)?\s+['"]?([^'"]+)['"]?$/i,  // Only 'search', not 'find'
                 handler: (match) => ({ type: 'search', query: match[1] })
             },
+            // Other commands
             {
                 type: 'click',
                 pattern: /^click(?:\s+on)?\s+["']?([^"']+?)["']?$/i,
@@ -181,6 +189,9 @@ class QAInterface {
             case 'refresh':
                 this.isNavigating = true;
                 await this.handleRefresh();
+                break;
+            case 'find':
+                await this.handleFind(command.text);
                 break;
         }
     }
@@ -455,6 +466,73 @@ class QAInterface {
         this.isNavigating = true;
     }
 
+    async handleFind(text) {
+        try {
+            console.log('\u{1F50D} Finding text:', text);
+            this.addToChat(`Finding "${text}"...`, 'assistant');
+            
+            const result = await chrome.scripting.executeScript({
+                target: { tabId: this.browserTabId },
+                function: (searchText) => {
+                    // Remove existing highlights
+                    const oldHighlights = document.querySelectorAll('.qa-highlight');
+                    oldHighlights.forEach(h => {
+                        const parent = h.parentNode;
+                        parent.replaceChild(document.createTextNode(h.textContent), h);
+                        parent.normalize();
+                    });
+
+                    // Create TreeWalker to find text nodes
+                    const walker = document.createTreeWalker(
+                        document.body,
+                        NodeFilter.SHOW_TEXT,
+                        null,
+                        false
+                    );
+
+                    let node;
+                    let found = false;
+                    const searchRegex = new RegExp(searchText, 'gi');
+
+                    while (node = walker.nextNode()) {
+                        if (node.textContent.match(searchRegex)) {
+                            const span = document.createElement('span');
+                            span.className = 'qa-highlight';
+                            span.style.backgroundColor = '#ffeb3b';
+                            span.style.color = '#000';
+                            span.style.padding = '2px';
+                            span.style.borderRadius = '3px';
+                            span.textContent = node.textContent;
+                            node.parentNode.replaceChild(span, node);
+                            found = true;
+
+                            // Scroll to first match
+                            if (!document.querySelector('.qa-highlight')) {
+                                span.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center'
+                                });
+                            }
+                        }
+                    }
+                    return { success: found, count: document.querySelectorAll('.qa-highlight').length };
+                },
+                args: [text]
+            });
+
+            const { success, count } = result[0].result;
+            if (success) {
+                this.addToChat(`Found ${count} matches for "${text}"`, 'assistant');
+                await this.captureAndShowScreenshot();
+            } else {
+                this.addToChat(`No matches found for "${text}"`, 'error');
+            }
+        } catch (error) {
+            console.error('\u{274C} Find failed:', error);
+            this.addToChat(`Find failed: ${error.message}`, 'error');
+        }
+    }
+
     setupEventListeners() {
         this.elements.sendButton.addEventListener('click', () => {
             const userInput = this.elements.input.value.trim();
@@ -486,6 +564,7 @@ class QAInterface {
         this.addToChat(`Ready! Try commands like:
 - "go to google.com"
 - "search for 'something'"
+- "find 'text on page'"
 - "click on 'Login'"
 - "scroll down/up"
 - "go back"
