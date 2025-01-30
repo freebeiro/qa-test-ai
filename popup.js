@@ -3,7 +3,7 @@
 
 class CommandProcessor {
     constructor() {
-        console.log('🔧 Initializing CommandProcessor');
+        console.log('\u{1F527} Initializing CommandProcessor');
     }
 
     async processCommand(userInput) {
@@ -101,18 +101,23 @@ class QAInterface {
     async handleCommand(userInput) {
         if (!userInput.trim() || this.isProcessing) return;
 
+        console.log('\u{27A1} Processing command:', userInput);
+        
         try {
             this.toggleUI(false);
             this.addToChat(userInput);
 
             const command = await this.commandProcessor.processCommand(userInput);
             if (!command) {
+                console.log('\u{274C} Unknown command');
                 this.addToChat('Unknown command', 'error');
                 return;
             }
 
+            console.log('\u{2713} Command parsed:', command);
             await this.executeCommand(command);
         } catch (error) {
+            console.error('\u{274C} Command failed:', error);
             this.addToChat(`Error: ${error.message}`, 'error');
         } finally {
             this.toggleUI(true);
@@ -153,6 +158,7 @@ class QAInterface {
 
     async handleNavigation(url) {
         if (!this.browserTabId) {
+            console.error('❌ No browser tab to control');
             this.addToChat('Error: No browser tab to control', 'error');
             return;
         }
@@ -160,11 +166,12 @@ class QAInterface {
         url = url.startsWith('http') ? url : `https://${url}`;
         
         try {
+            console.log('\u{27A1} Navigating to:', url);
             this.addToChat(`Navigating to ${url}...`, 'assistant');
             this.isNavigating = true;
             await chrome.tabs.update(this.browserTabId, { url });
         } catch (error) {
-            console.error('Navigation failed:', error);
+            console.error('❌ Navigation failed:', error);
             this.addToChat(`Navigation failed: ${error.message}`, 'error');
             this.toggleUI(true);
         }
@@ -172,16 +179,18 @@ class QAInterface {
 
     async handleSearch(searchQuery) {
         if (!this.browserTabId) {
+            console.error('❌ No browser tab to control');
             this.addToChat('Error: No browser tab to control', 'error');
             return;
         }
 
         try {
+            console.log('\u{1F50D} Searching for:', searchQuery);
             this.addToChat(`Searching for "${searchQuery}"...`, 'assistant');
             this.isNavigating = true;
             await this.performSearch(searchQuery);
         } catch (error) {
-            console.error('Search failed:', error);
+            console.error('❌ Search failed:', error);
             this.addToChat(`Search failed: ${error.message}`, 'error');
             this.toggleUI(true);
         }
@@ -231,17 +240,19 @@ class QAInterface {
 
     async captureAndShowScreenshot() {
         if (!this.browserTabId) {
-            console.error('No browser tab to screenshot');
+            console.error('❌ No browser tab to screenshot');
             return;
         }
 
         try {
+            console.log('\u{1F4F7} Taking screenshot');
             const tab = await chrome.tabs.get(this.browserTabId);
             const screenshot = await chrome.tabs.captureVisibleTab(tab.windowId, {
                 format: 'png',
                 quality: 100
             });
             
+            console.log('\u{2713} Screenshot captured');
             const imgDiv = document.createElement('div');
             imgDiv.className = 'screenshot';
             const img = document.createElement('img');
@@ -253,7 +264,7 @@ class QAInterface {
             this.elements.chat.appendChild(imgDiv);
             this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
         } catch (error) {
-            console.error('Screenshot failed:', error);
+            console.error('❌ Screenshot failed:', error);
         }
     }
 
