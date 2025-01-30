@@ -28,18 +28,6 @@
             flex-direction: column;
         }
 
-        #versionInfo {
-            position: absolute;
-            top: var(--padding);
-            right: var(--padding);
-            font-size: clamp(10px, 2vw, 11px);
-            color: #666;
-            background: rgba(255,255,255,0.8);
-            padding: 4px 8px;
-            border-radius: 12px;
-            backdrop-filter: blur(4px);
-        }
-
         #chat {
             flex: 1;
             min-height: 0;  /* Important for flex child scrolling */
@@ -197,7 +185,6 @@
     </style>
 </head>
 <body>
-    <div id="versionInfo"></div>
     <div id="chat"></div>
     <div class="input-container">
         <textarea id="input" placeholder="Enter a command..." rows="1"></textarea>

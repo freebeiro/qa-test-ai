@@ -29,7 +29,6 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 chrome.runtime.onConnect.addListener(function(port) {
     if (port.name === "qa-window") {
-        console.log('QA Window connected');
         activePort = port;
 
         port.postMessage({
@@ -38,7 +37,6 @@ chrome.runtime.onConnect.addListener(function(port) {
         });
 
         port.onDisconnect.addListener(() => {
-            console.log('QA Window disconnected');
             activePort = null;
         });
     }

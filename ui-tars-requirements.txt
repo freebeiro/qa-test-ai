@@ -1,8 +1,0 @@
-numpy==1.26.4
-vllm==0.4.2
-numba==0.58.1 
-transformers==4.38.2
-torch==2.2.1
-fastapi==0.110.0
-pydantic-settings==2.1.1
-uvicorn[standard]==0.27.1
