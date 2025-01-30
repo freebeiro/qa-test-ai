@@ -30,7 +30,13 @@ class CommandProcessor {
                 pattern: /^(?:go\s+)?forward$/i,
                 handler: () => ({ type: 'forward' })
             },
-            // Find command with strict pattern
+            // Find and click before find to prevent pattern overlap
+            {
+                type: 'findAndClick',
+                pattern: /^find\s+and\s+click\s+(?:text\s+)?(?:["']([^"']+)["']|(\S+(?:\s+\S+)*))$/i,
+                handler: (match) => ({ type: 'findAndClick', text: match[1] || match[2] })
+            },
+            // Then find
             {
                 type: 'find',
                 pattern: /^find\s+(?:text\s+)?(?:["']([^"']+)["']|(\S+(?:\s+\S+)*))$/i,
@@ -63,7 +69,7 @@ class CommandProcessor {
                 type: 'refresh',
                 pattern: /^(?:refresh|reload)$/i,
                 handler: () => ({ type: 'refresh' })
-            }
+            },
         ];
 
         for (const command of commands) {
@@ -192,6 +198,9 @@ class QAInterface {
                 break;
             case 'find':
                 await this.handleFind(command.text);
+                break;
+            case 'findAndClick':
+                await this.handleFindAndClick(command.text);
                 break;
         }
     }
@@ -533,6 +542,91 @@ class QAInterface {
         }
     }
 
+    async handleFindAndClick(text) {
+        try {
+            console.log('\u{1F50D} Finding and clicking text:', text);
+            this.addToChat(`Finding and clicking "${text}"...`, 'assistant');
+            
+            const result = await chrome.scripting.executeScript({
+                target: { tabId: this.browserTabId },
+                function: (searchText) => {
+                    // Find clickable elements containing the text
+                    const elements = [
+                        // Direct elements
+                        ...document.querySelectorAll('a, button, [role="button"], input[type="submit"], [onclick], [class*="button"], [class*="btn"]'),
+                        // Image elements with alt text
+                        ...document.querySelectorAll('img[alt]'),
+                        // Elements with aria-label
+                        ...document.querySelectorAll('[aria-label]'),
+                        // Elements with title
+                        ...document.querySelectorAll('[title]')
+                    ].filter(el => {
+                        const text = el.textContent?.trim().toLowerCase() || '';
+                        const ariaLabel = el.getAttribute('aria-label')?.toLowerCase() || '';
+                        const title = el.getAttribute('title')?.toLowerCase() || '';
+                        const alt = el.getAttribute('alt')?.toLowerCase() || '';
+                        const targetLower = searchText.toLowerCase();
+                        
+                        // Check if element or its parent is clickable
+                        const isClickable = el.tagName === 'A' || 
+                                          el.tagName === 'BUTTON' ||
+                                          el.closest('a') ||
+                                          el.closest('button') ||
+                                          el.onclick ||
+                                          el.closest('[onclick]');
+                        
+                        return isClickable && (
+                            text.includes(targetLower) || 
+                            ariaLabel.includes(targetLower) || 
+                            title.includes(targetLower) ||
+                            alt.includes(targetLower)
+                        );
+                    });
+
+                    if (elements.length > 0) {
+                        // Get the actual clickable element (element itself or closest parent)
+                        const element = elements[0];
+                        const clickableElement = element.tagName === 'A' || element.tagName === 'BUTTON' 
+                            ? element 
+                            : element.closest('a, button, [onclick]') || element;
+
+                        // Highlight the element
+                        const span = document.createElement('span');
+                        span.className = 'qa-highlight qa-highlight-click';
+                        span.style.backgroundColor = '#4caf50';
+                        span.style.color = '#fff';
+                        span.style.padding = '2px';
+                        span.style.borderRadius = '3px';
+                        
+                        // Scroll element into view
+                        clickableElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+
+                        // Click after a short delay to show highlight
+                        setTimeout(() => clickableElement.click(), 500);
+                        return { success: true };
+                    }
+                    return { success: false };
+                },
+                args: [text]
+            });
+
+            if (result[0].result.success) {
+                this.addToChat(`Found and clicked "${text}"`, 'assistant');
+                this.isNavigating = true;  // In case click causes navigation
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await this.captureAndShowScreenshot();
+            } else {
+                this.addToChat(`Could not find clickable element with text "${text}"`, 'error');
+            }
+        } catch (error) {
+            console.error('\u{274C} Find and click failed:', error);
+            this.addToChat(`Find and click failed: ${error.message}`, 'error');
+        }
+    }
+
     setupEventListeners() {
         this.elements.sendButton.addEventListener('click', () => {
             const userInput = this.elements.input.value.trim();
@@ -565,6 +659,7 @@ class QAInterface {
 - "go to google.com"
 - "search for 'something'"
 - "find 'text on page'"
+- "find and click 'text'"
 - "click on 'Login'"
 - "scroll down/up"
 - "go back"
