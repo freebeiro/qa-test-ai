@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>QA Testing Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         :root {
             --primary-color: #2196f3;
@@ -9,24 +10,29 @@
             --text-color: #333;
             --border-radius: 12px;
             --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --padding: clamp(12px, 3vw, 20px);
+            --chat-height: clamp(300px, calc(100vh - 140px), 800px);
         }
 
         body {
-            width: 450px;
-            height: 600px;
+            width: 100%;
+            min-width: 300px;
+            height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: var(--padding);
             box-sizing: border-box;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: var(--bg-color);
             color: var(--text-color);
+            display: flex;
+            flex-direction: column;
         }
 
         #versionInfo {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 11px;
+            top: var(--padding);
+            right: var(--padding);
+            font-size: clamp(10px, 2vw, 11px);
             color: #666;
             background: rgba(255,255,255,0.8);
             padding: 4px 8px;
@@ -35,10 +41,11 @@
         }
 
         #chat {
-            height: calc(100vh - 140px);
+            flex: 1;
+            min-height: 0;  /* Important for flex child scrolling */
             overflow-y: auto;
-            margin-bottom: 20px;
-            padding: 15px;
+            margin-bottom: var(--padding);
+            padding: var(--padding);
             background: white;
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
@@ -46,10 +53,12 @@
 
         .message {
             margin: 12px 0;
-            padding: 12px 16px;
+            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
             border-radius: var(--border-radius);
-            max-width: 85%;
+            max-width: clamp(200px, 85%, 400px);
+            font-size: clamp(13px, 2vw, 14px);
             animation: fadeIn 0.3s ease-out;
+            word-wrap: break-word;
         }
 
         @keyframes fadeIn {
@@ -79,22 +88,31 @@
         }
 
         .input-container {
+            position: sticky;
+            bottom: 0;
+            margin-top: auto;
             display: flex;
-            gap: 12px;
+            gap: 10px;
             background: white;
-            padding: 12px;
+            padding: var(--padding);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
         }
 
         #input {
             flex: 1;
-            padding: 12px 16px;
+            min-width: 0;  /* Prevents flex item from overflowing */
+            min-height: 40px;
+            max-height: 120px;  /* Prevents too tall textbox */
+            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
             border: 2px solid #e0e0e0;
             border-radius: var(--border-radius);
-            font-size: 14px;
+            font-size: clamp(13px, 2vw, 14px);
             transition: all 0.2s ease;
             font-family: inherit;
+            resize: vertical;  /* Allows vertical resizing */
+            overflow-y: auto;  /* Adds scrollbar when needed */
+            line-height: 1.4;  /* Better line spacing */
         }
 
         #input:focus {
@@ -104,7 +122,9 @@
         }
 
         #sendButton {
-            padding: 12px 24px;
+            align-self: flex-end;  /* Aligns with bottom of textarea */
+            padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 24px);
+            height: 40px;  /* Match minimum height of textarea */
             background: var(--primary-color);
             color: white;
             border: none;
@@ -113,6 +133,8 @@
             font-weight: 500;
             transition: all 0.2s ease;
             font-family: inherit;
+            white-space: nowrap;
+            font-size: clamp(13px, 2vw, 14px);
         }
 
         #sendButton:hover {
@@ -127,7 +149,7 @@
         }
 
         .screenshot {
-            margin: 15px 0;
+            margin: clamp(10px, 3vw, 15px) 0;
             border-radius: var(--border-radius);
             overflow: hidden;
             box-shadow: var(--shadow);
@@ -135,13 +157,29 @@
 
         .screenshot img {
             width: 100%;
+            height: auto;
             display: block;
             border-radius: var(--border-radius);
         }
 
+        /* Media Queries */
+        @media (max-width: 400px) {
+            body {
+                padding: 10px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+
+            #sendButton {
+                padding: 8px 16px;
+            }
+        }
+
         /* Scrollbar styling */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: clamp(6px, 1.5vw, 8px);
         }
 
         ::-webkit-scrollbar-track {
@@ -162,7 +200,7 @@
     <div id="versionInfo"></div>
     <div id="chat"></div>
     <div class="input-container">
-        <input type="text" id="input" placeholder="Enter a command...">
+        <textarea id="input" placeholder="Enter a command..." rows="1"></textarea>
         <button id="sendButton">Send</button>
     </div>
     <script src="popup.js"></script>

@@ -61,22 +61,6 @@ class QAInterface {
             input: document.getElementById('input'),
             sendButton: document.getElementById('sendButton')
         };
-
-        // Apply styles
-        this.applyStyles();
-    }
-
-    applyStyles() {
-        document.body.style.cssText = `
-            height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        `;
-        this.elements.chat.style.cssText = `
-            height: calc(100vh - 140px);
-            overflow-y: auto;
-        `;
     }
 
     connectToBackground() {
@@ -286,6 +270,13 @@ class QAInterface {
                     this.handleCommand(userInput);
                 }
             }
+        });
+
+        // Auto-resize textarea
+        this.elements.input.addEventListener('input', () => {
+            const textarea = this.elements.input;
+            textarea.style.height = 'auto';  // Reset height
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';  // Set new height with max limit
         });
 
         // Welcome message
