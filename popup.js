@@ -20,6 +20,11 @@ class CommandProcessor {
     parseCommand(input) {
         const commands = [
             {
+                type: 'back',
+                pattern: /^(?:go\s+)?back$/i,
+                handler: () => ({ type: 'back' })
+            },
+            {
                 type: 'navigation',
                 pattern: /^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i,
                 handler: (match) => ({ type: 'navigation', url: match[1] })
@@ -28,6 +33,26 @@ class CommandProcessor {
                 type: 'search',
                 pattern: /^(?:search|find|look)(?:\s+for)?\s+['"]?([^'"]+)['"]?$/i,
                 handler: (match) => ({ type: 'search', query: match[1] })
+            },
+            {
+                type: 'click',
+                pattern: /^click(?:\s+on)?\s+["']?([^"']+?)["']?$/i,
+                handler: (match) => ({ type: 'click', target: match[1] })
+            },
+            {
+                type: 'scroll',
+                pattern: /^scroll\s+(up|down|top|bottom)$/i,
+                handler: (match) => ({ type: 'scroll', direction: match[1] })
+            },
+            {
+                type: 'forward',
+                pattern: /^(?:go\s+)?forward$/i,
+                handler: () => ({ type: 'forward' })
+            },
+            {
+                type: 'refresh',
+                pattern: /^(?:refresh|reload)$/i,
+                handler: () => ({ type: 'refresh' })
             }
         ];
 
@@ -136,6 +161,24 @@ class QAInterface {
                 break;
             case 'search':
                 await this.handleSearch(command.query);
+                break;
+            case 'click':
+                this.isNavigating = true;
+                await this.handleClick(command.target);
+                break;
+            case 'scroll':
+                await this.handleScroll(command.direction);
+                break;
+            case 'back':
+                await this.handleBack();
+                break;
+            case 'forward':
+                this.isNavigating = true;
+                await this.handleForward();
+                break;
+            case 'refresh':
+                this.isNavigating = true;
+                await this.handleRefresh();
                 break;
         }
     }
@@ -304,6 +347,93 @@ class QAInterface {
         }
     }
 
+    async handleClick(target) {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId: this.browserTabId },
+            function: (targetText) => {
+                // Find elements by text content, aria-label, or title
+                const elements = [...document.querySelectorAll('a, button, [role="button"], input[type="submit"]')]
+                    .filter(el => {
+                        const text = el.textContent?.trim().toLowerCase() || '';
+                        const ariaLabel = el.getAttribute('aria-label')?.toLowerCase() || '';
+                        const title = el.getAttribute('title')?.toLowerCase() || '';
+                        const targetLower = targetText.toLowerCase();
+                        return text.includes(targetLower) || 
+                               ariaLabel.includes(targetLower) || 
+                               title.includes(targetLower);
+                    });
+
+                if (elements.length > 0) {
+                    elements[0].click();
+                    return { success: true };
+                }
+                return { success: false };
+            },
+            args: [target]
+        });
+
+        if (!result[0].result.success) {
+            this.addToChat(`Could not find element "${target}" to click`, 'error');
+        }
+    }
+
+    async handleScroll(direction) {
+        await chrome.scripting.executeScript({
+            target: { tabId: this.browserTabId },
+            function: (dir) => {
+                switch (dir) {
+                    case 'up':
+                        window.scrollBy(0, -300);
+                        break;
+                    case 'down':
+                        window.scrollBy(0, 300);
+                        break;
+                    case 'top':
+                        window.scrollTo(0, 0);
+                        break;
+                    case 'bottom':
+                        window.scrollTo(0, document.body.scrollHeight);
+                        break;
+                }
+            },
+            args: [direction]
+        });
+    }
+
+    async handleBack() {
+        try {
+            console.log('\u{27A1} Going back');
+            this.addToChat('Going back...', 'assistant');
+            this.isNavigating = true;
+            
+            // Get current tab history
+            const tab = await chrome.tabs.get(this.browserTabId);
+            
+            // Execute the back command
+            await chrome.tabs.goBack(this.browserTabId);
+            
+            // Wait for navigation
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Take screenshot after navigation
+            await this.captureAndShowScreenshot();
+        } catch (error) {
+            console.error('\u{274C} Back navigation failed:', error);
+            this.addToChat(`Back navigation failed: ${error.message}`, 'error');
+            this.toggleUI(true);
+        }
+    }
+
+    async handleForward() {
+        await chrome.tabs.goForward(this.browserTabId);
+        this.isNavigating = true;
+    }
+
+    async handleRefresh() {
+        await chrome.tabs.reload(this.browserTabId);
+        this.isNavigating = true;
+    }
+
     setupEventListeners() {
         this.elements.sendButton.addEventListener('click', () => {
             const userInput = this.elements.input.value.trim();
@@ -332,7 +462,13 @@ class QAInterface {
         });
 
         // Welcome message
-        this.addToChat('Ready! Try commands like "go to google.com" or "search for \'something\'"', 'assistant');
+        this.addToChat(`Ready! Try commands like:
+- "go to google.com"
+- "search for 'something'"
+- "click on 'Login'"
+- "scroll down/up"
+- "go back"
+- "refresh"`, 'assistant');
     }
 }
 
