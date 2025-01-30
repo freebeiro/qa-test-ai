@@ -1,6 +1,3 @@
-import config from './config.js';
-import CommandProcessor from './command_processor.js';
-
 // Global state
 let isProcessing = false;
 let isNavigating = false;
@@ -21,40 +18,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     chat.style.height = 'calc(100vh - 140px)';
     chat.style.overflowY = 'auto';
 
-    // Initialize command processor
-    const commandProcessor = new CommandProcessor(config);
-    console.log('🔄 Extension loaded:', config);
-
-    async function captureAndShowScreenshot() {
-        if (!browserTabId) {
-            console.error('No browser tab to screenshot');
-            return;
-        }
-
-        console.log('📸 Capturing screenshot of browser tab:', browserTabId);
-        try {
-            const tab = await chrome.tabs.get(browserTabId);
-            const screenshot = await chrome.tabs.captureVisibleTab(tab.windowId, {
-                format: 'png',
-                quality: 100
-            });
-            
-            console.log('✅ Screenshot captured');
-            const imgDiv = document.createElement('div');
-            imgDiv.className = 'screenshot';
-            const img = document.createElement('img');
-            img.src = screenshot;
-            img.style.maxWidth = '100%';
-            img.style.border = '1px solid #ddd';
-            img.style.borderRadius = '4px';
-            imgDiv.appendChild(img);
-            chat.appendChild(imgDiv);
-            chat.scrollTop = chat.scrollHeight;
-        } catch (error) {
-            console.error('❌ Screenshot failed:', error);
-        }
-    }
-
+    // Connect to background and handle messages
     function connectToBackground() {
         try {
             port = chrome.runtime.connect({name: "qa-window"});
@@ -63,35 +27,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             port.onMessage.addListener(async (msg) => {
                 console.log('Background message:', msg);
                 
-                switch(msg.type) {
-                    case 'INIT_STATE':
-                        browserTabId = msg.browserTabId;
-                        console.log('Got browser tab ID:', browserTabId);
-                        break;
-                        
-                    case 'TAB_UPDATED':
-                        if (msg.status === 'complete' && isNavigating) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            await captureAndShowScreenshot();
-                            enableUI();
-                        }
-                        break;
-                        
-                    case 'BROWSER_TAB_INFO':
-                        browserTabId = msg.tabId;
-                        break;
+                if (msg.type === 'TAB_UPDATED' && msg.status === 'complete' && isNavigating) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await captureAndShowScreenshot();
+                    enableUI();
+                }
+                else if (msg.type === 'INIT_STATE') {
+                    browserTabId = msg.browserTabId;
+                    console.log('Got browser tab ID:', browserTabId);
                 }
             });
-
-            port.postMessage({ type: 'GET_BROWSER_TAB' });
         } catch (error) {
             console.error('Failed to connect to background:', error);
         }
     }
 
-    // Connect to background
+    // Initialize connection
     connectToBackground();
 
+    // UI State Management
     function disableUI() {
         isProcessing = true;
         input.disabled = true;
@@ -107,6 +61,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         sendButton.style.backgroundColor = '#2196f3';
     }
 
+    // Chat Functions
     function addToChat(message, type = 'user') {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
@@ -115,6 +70,37 @@ document.addEventListener('DOMContentLoaded', async function() {
         chat.scrollTop = chat.scrollHeight;
     }
 
+    // Screenshot Function
+    async function captureAndShowScreenshot() {
+        if (!browserTabId) {
+            console.error('No browser tab to screenshot');
+            return;
+        }
+
+        console.log('📸 Capturing screenshot of browser tab:', browserTabId);
+        try {
+            const tab = await chrome.tabs.get(browserTabId);
+            const screenshot = await chrome.tabs.captureVisibleTab(tab.windowId, {
+                format: 'png',
+                quality: 100
+            });
+            
+            const imgDiv = document.createElement('div');
+            imgDiv.className = 'screenshot';
+            const img = document.createElement('img');
+            img.src = screenshot;
+            img.style.maxWidth = '100%';
+            img.style.border = '1px solid #ddd';
+            img.style.borderRadius = '4px';
+            imgDiv.appendChild(img);
+            chat.appendChild(imgDiv);
+            chat.scrollTop = chat.scrollHeight;
+        } catch (error) {
+            console.error('❌ Screenshot failed:', error);
+        }
+    }
+
+    // Command Handlers
     async function handleNavigation(url) {
         if (!browserTabId) {
             addToChat('Error: No browser tab to control', 'error');
@@ -127,10 +113,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             addToChat(`Navigating to ${url}...`, 'assistant');
             isNavigating = true;
-
-            console.log('🌐 Starting navigation:', url);
             await chrome.tabs.update(browserTabId, { url });
-
         } catch (error) {
             console.error('❌ Navigation failed:', error);
             addToChat(`Navigation failed: ${error.message}`, 'error');
@@ -146,6 +129,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         try {
+            addToChat(`Searching for "${searchQuery}"...`, 'assistant');
+            isNavigating = true;
+
             const searchResult = await chrome.scripting.executeScript({
                 target: { tabId: browserTabId },
                 function: (query) => {
@@ -164,13 +150,21 @@ document.addEventListener('DOMContentLoaded', async function() {
                         '.searchbox'
                     ];
 
+                    // Try to find search input
                     let searchInput = null;
                     for (const selector of searchSelectors) {
-                        searchInput = document.querySelector(selector);
-                        if (searchInput) break;
+                        const element = document.querySelector(selector);
+                        if (element && element.offsetParent !== null) {  // Check if visible
+                            searchInput = element;
+                            break;
+                        }
                     }
 
                     if (searchInput) {
+                        // Clear any existing value
+                        searchInput.value = '';
+                        
+                        // Set new value and trigger input event
                         searchInput.value = query;
                         searchInput.dispatchEvent(new Event('input', { bubbles: true }));
                         
@@ -200,14 +194,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const result = searchResult[0].result;
             
-            if (result.success) {
-                addToChat(`Searching for "${searchQuery}" on this website...`, 'assistant');
-                isNavigating = true;  // Treat search as navigation
-                return;
+            if (!result.success) {
+                addToChat(`No search bar found, searching on Google instead...`, 'assistant');
+                await handleNavigation(`google.com/search?q=${encodeURIComponent(searchQuery)}`);
             }
-
-            addToChat(`No search bar found, searching on Google instead...`, 'assistant');
-            await handleNavigation(`google.com/search?q=${encodeURIComponent(searchQuery)}`);
 
         } catch (error) {
             console.error('❌ Search failed:', error);
@@ -225,14 +215,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             disableUI();
 
-            // Navigation command
             const navMatch = userInput.match(/^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i);
             if (navMatch) {
                 await handleNavigation(navMatch[1]);
                 return;
             }
 
-            // Search command
             const searchMatch = userInput.match(/^search\s+for\s+['"]?([^'"]+)['"]?/i);
             if (searchMatch) {
                 await handleSearch(searchMatch[1]);
@@ -240,7 +228,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             enableUI();
-
         } catch (error) {
             console.error('❌ Command failed:', error);
             addToChat(`Error: ${error.message}`, 'error');
@@ -258,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) {
             const userInput = input.value.trim();
             if (userInput) {
                 e.preventDefault();
@@ -268,6 +255,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    // Initialize with helpful message
+    // Initialize
     addToChat('Ready! Try commands like "go to google.com" or "search for \'something\'"', 'assistant');
 });
