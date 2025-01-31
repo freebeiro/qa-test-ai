@@ -6,18 +6,14 @@ let activePort = null;
 chrome.action.onClicked.addListener(async (tab) => {
     browserTabId = tab.id;
     
-    // Get screen dimensions
-    const screen = window.screen;
-    const width = Math.min(600, screen.availWidth * 0.4);  // 40% of screen width, max 600px
-    const height = Math.min(800, screen.availHeight * 0.8);  // 80% of screen height, max 800px
-    
+    // Create window with fixed dimensions instead of calculating from screen
     qaWindow = await chrome.windows.create({
         url: 'popup.html',
         type: 'popup',
-        width: width,
-        height: height,
-        left: screen.availWidth - width - 20,  // 20px from right edge
-        top: 20  // 20px from top
+        width: 450,  // Fixed width
+        height: 600, // Fixed height
+        top: 20,     // Fixed position from top
+        left: 20     // Fixed position from left
     });
 
     chrome.windows.onRemoved.addListener((windowId) => {
