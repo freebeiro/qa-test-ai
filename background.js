@@ -6,14 +6,14 @@ let activePort = null;
 chrome.action.onClicked.addListener(async (tab) => {
     browserTabId = tab.id;
     
-    // Create window with fixed dimensions instead of calculating from screen
+    // Create window with better dimensions
     qaWindow = await chrome.windows.create({
         url: 'popup.html',
         type: 'popup',
-        width: 450,  // Fixed width
-        height: 600, // Fixed height
-        top: 20,     // Fixed position from top
-        left: 20     // Fixed position from left
+        width: 500,  // Slightly wider
+        height: 700, // Taller to accommodate chat
+        top: 20,
+        left: 20
     });
 
     chrome.windows.onRemoved.addListener((windowId) => {

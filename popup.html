@@ -10,164 +10,121 @@
             --text-color: #333;
             --border-radius: 12px;
             --shadow: 0 2px 8px rgba(0,0,0,0.1);
-            --padding: clamp(12px, 3vw, 20px);
-            --chat-height: clamp(300px, calc(100vh - 140px), 800px);
+            --padding: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
             width: 100%;
-            min-width: 300px;
             height: 100vh;
             margin: 0;
             padding: var(--padding);
-            box-sizing: border-box;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: var(--bg-color);
             color: var(--text-color);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
-        #chat {
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 16px;
+        }
+
+        #screenshot {
             flex: 1;
-            min-height: 0;  /* Important for flex child scrolling */
+            min-height: 0; /* Important for flex container */
             overflow-y: auto;
-            margin-bottom: var(--padding);
-            padding: var(--padding);
             background: white;
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
+            padding: var(--padding);
+            margin-bottom: 16px;
         }
 
-        .message {
-            margin: 12px 0;
-            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
+        #screenshot img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .chat-container {
+            position: sticky;
+            bottom: 0;
+            background: white;
             border-radius: var(--border-radius);
-            max-width: clamp(200px, 85%, 400px);
-            font-size: clamp(13px, 2vw, 14px);
-            animation: fadeIn 0.3s ease-out;
-            word-wrap: break-word;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .user {
-            background: var(--primary-color);
-            color: white;
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-
-        .assistant {
-            background: #e9ecef;
-            color: var(--text-color);
-            margin-right: auto;
-            border-bottom-left-radius: 4px;
-        }
-
-        .error {
-            background: #ffebee;
-            color: #c62828;
-            margin-right: auto;
-            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow);
+            padding: 12px;
+            margin-top: auto;
         }
 
         .input-container {
-            position: sticky;
-            bottom: 0;
-            margin-top: auto;
             display: flex;
-            gap: 10px;
-            background: white;
-            padding: var(--padding);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
+            gap: 8px;
+            width: 100%;
         }
 
-        #input {
+        #command-input {
             flex: 1;
-            min-width: 0;  /* Prevents flex item from overflowing */
-            min-height: 40px;
-            max-height: 120px;  /* Prevents too tall textbox */
-            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
-            border: 2px solid #e0e0e0;
-            border-radius: var(--border-radius);
-            font-size: clamp(13px, 2vw, 14px);
-            transition: all 0.2s ease;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
             font-family: inherit;
-            resize: vertical;  /* Allows vertical resizing */
-            overflow-y: auto;  /* Adds scrollbar when needed */
-            line-height: 1.4;  /* Better line spacing */
-        }
-
-        #input:focus {
+            font-size: 14px;
+            resize: none;
+            min-height: 36px;
+            max-height: 100px;
             outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+            overflow-y: auto;
         }
 
-        #sendButton {
-            align-self: flex-end;  /* Aligns with bottom of textarea */
-            padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 24px);
-            height: 40px;  /* Match minimum height of textarea */
+        #command-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(33,150,243,0.1);
+        }
+
+        #send-button {
+            padding: 8px 16px;
             background: var(--primary-color);
             color: white;
             border: none;
-            border-radius: var(--border-radius);
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 500;
-            transition: all 0.2s ease;
-            font-family: inherit;
+            transition: all 0.2s;
             white-space: nowrap;
-            font-size: clamp(13px, 2vw, 14px);
+            align-self: flex-end;
         }
 
-        #sendButton:hover {
+        #send-button:hover {
             background: #1976d2;
-            transform: translateY(-1px);
         }
 
-        #sendButton:disabled {
+        #send-button:disabled {
             background: #cccccc;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .screenshot {
-            margin: clamp(10px, 3vw, 15px) 0;
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow);
-        }
-
-        .screenshot img {
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: var(--border-radius);
-        }
-
-        /* Media Queries */
-        @media (max-width: 400px) {
-            body {
-                padding: 10px;
-            }
-            
-            .message {
-                max-width: 90%;
-            }
-
-            #sendButton {
-                padding: 8px 16px;
-            }
+        .error-message {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
         }
 
         /* Scrollbar styling */
         ::-webkit-scrollbar {
-            width: clamp(6px, 1.5vw, 8px);
+            width: 8px;
         }
 
         ::-webkit-scrollbar-track {
@@ -182,13 +139,55 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #b0bec5;
         }
+
+        .chat-entry {
+            margin-bottom: 20px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .command-text {
+            font-family: monospace;
+            color: #1976d2;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            background: #f5f7fa;
+            border-radius: 4px;
+        }
+
+        .screenshots-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .screenshot-wrapper {
+            position: relative;
+        }
+
+        .screenshot-caption {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div id="chat"></div>
-    <div class="input-container">
-        <textarea id="input" placeholder="Enter a command..." rows="1"></textarea>
-        <button id="sendButton">Send</button>
+    <div id="app">
+        <div id="screenshot"></div>
+        <div class="chat-container">
+            <div class="input-container">
+                <textarea 
+                    id="command-input" 
+                    placeholder="Enter a command..."
+                    rows="1"
+                ></textarea>
+                <button id="send-button">Send</button>
+            </div>
+        </div>
     </div>
     <script src="popup.js"></script>
 </body>
