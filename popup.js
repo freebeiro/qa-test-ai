@@ -88,16 +88,21 @@ class CommandProcessor {
             // Enhanced click patterns
             {
                 type: 'smartClick',
-                pattern: /^(?:click|select)\s+(?:on\s+)?(?:the\s+)?(\d+(?:st|nd|rd|th)|first|last|)\s*(?:item\s+)?(?:with\s+)?(?:price\s+(\d+[.,]\d+)|between\s+(\d+[.,]\d+)\s+and\s+(\d+[.,]\d+)|containing\s+"([^"]+)")/i,
+                pattern: /^(?:click|select|enter)\s+(?:on\s+)?(?:the\s+)?(\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|last|[0-9]+)\s*(?:item|element)?(?:\s+containing\s+["']([^"']+)["'])?$/i,
                 handler: (match) => ({
                     type: 'smartClick',
                     index: this.parseIndex(match[1]),
-                    price: match[2] ? parseFloat(match[2].replace(',', '.')) : null,
-                    priceRange: match[3] && match[4] ? {
-                        min: parseFloat(match[3].replace(',', '.')),
-                        max: parseFloat(match[4].replace(',', '.'))
-                    } : null,
-                    text: match[5]
+                    text: match[2] || null
+                })
+            },
+            // Simple click with text
+            {
+                type: 'smartClick',
+                pattern: /^(?:click|select|enter)(?:\s+on)?(?:\s+item)?(?:\s+containing)?\s+["']([^"']+)["']$/i,
+                handler: (match) => ({
+                    type: 'smartClick',
+                    index: 0, // First match by default
+                    text: match[1]
                 })
             },
             // Enhanced product selection commands
@@ -141,19 +146,24 @@ class CommandProcessor {
 
     parseIndex(indexStr) {
         if (!indexStr) return 0;
-        const indexMap = {
+        
+        const numberMap = {
             'first': 0,
             'second': 1,
             'third': 2,
-            'last': 'last',
-            // Handle numeric indices (1st, 2nd, etc)
-            ...Object.fromEntries(
-                Array.from({length: 10}, (_, i) => 
-                    [`${i + 1}${this.getOrdinalSuffix(i + 1)}`, i]
-                )
-            )
+            'fourth': 3,
+            'fifth': 4,
+            'last': 'last'
         };
-        return indexMap[indexStr.toLowerCase()] ?? 0;
+
+        // Handle written numbers
+        if (indexStr.toLowerCase() in numberMap) {
+            return numberMap[indexStr.toLowerCase()];
+        }
+
+        // Handle numeric indices (1-based to 0-based)
+        const numericIndex = parseInt(indexStr) - 1;
+        return isNaN(numericIndex) ? 0 : numericIndex;
     }
 
     getOrdinalSuffix(i) {
@@ -553,6 +563,8 @@ class QAInterface {
         } finally {
             this.addToChatHistory(chatEntry);
             this.enableUI();
+            // Clear the input field after command execution
+            this.input.value = '';
         }
     }
 
