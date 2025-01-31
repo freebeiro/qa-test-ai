@@ -3,7 +3,7 @@
 
 class CommandProcessor {
     constructor() {
-        console.log('\u{1F527} Initializing CommandProcessor');
+        console.log('🔧 Initializing CommandProcessor');
     }
 
     async processCommand(userInput) {
@@ -83,21 +83,156 @@ class CommandProcessor {
     }
 }
 
+// Command interface
+class Command {
+    execute() {
+        throw new Error('Command must implement execute method');
+    }
+}
+
+// Concrete commands
+class NavigationCommand extends Command {
+    constructor(url, browserTab) {
+        super();
+        this.url = url;
+        this.browserTab = browserTab;
+    }
+
+    async execute() {
+        return await this.browserTab.navigate(this.url);
+    }
+}
+
+// Command factory
+class CommandFactory {
+    static createCommand(type, params, browserTab) {
+        switch(type) {
+            case 'navigation':
+                return new NavigationCommand(params.url, browserTab);
+            case 'search':
+                return new SearchCommand(params.query, browserTab);
+            case 'back':
+                return new BackCommand(browserTab);
+            case 'forward':
+                return new ForwardCommand(browserTab);
+            case 'refresh':
+                return new RefreshCommand(browserTab);
+            case 'scroll':
+                return new ScrollCommand(params.direction, browserTab);
+            case 'find':
+                return new FindCommand(params.text, browserTab);
+            case 'findAndClick':
+                return new FindAndClickCommand(params.text, browserTab);
+            default:
+                return null;
+        }
+    }
+}
+
+// Browser tab management
+class BrowserTabManager {
+    constructor(tabId) {
+        this.tabId = tabId;
+        console.log(`🔧 Initializing BrowserTabManager with tabId: ${tabId}`);
+    }
+
+    async navigate(url) {
+        url = url.startsWith('http') ? url : `https://${url}`;
+        return await chrome.tabs.update(this.tabId, { url });
+    }
+
+    async captureScreenshot() {
+        const tab = await chrome.tabs.get(this.tabId);
+        return await chrome.tabs.captureVisibleTab(tab.windowId, {
+            format: 'png',
+            quality: 100
+        });
+    }
+
+    async executeScript(func, args) {
+        console.log(`🔧 Executing script with args:`, args);
+        try {
+            const result = await chrome.scripting.executeScript({
+                target: { tabId: this.tabId },
+                function: func,
+                args: args
+            });
+            console.log('✅ Script execution result:', result);
+            return result;
+        } catch (error) {
+            console.error('❌ Script execution failed:', error);
+            throw error;
+        }
+    }
+}
+
+// UI Management
+class UIManager {
+    constructor(elements) {
+        this.elements = elements;
+    }
+
+    toggleControls(enabled) {
+        this.elements.input.disabled = !enabled;
+        this.elements.sendButton.disabled = !enabled;
+        this.elements.sendButton.style.backgroundColor = enabled ? '#2196f3' : '#cccccc';
+    }
+
+    addMessage(message, type = 'user') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = message;
+        this.elements.chat.appendChild(messageDiv);
+        this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
+    }
+}
+
+// Command Parser
+class CommandParser {
+    constructor() {
+        this.patterns = new Map([
+            ['navigation', /^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i],
+            ['search', /^search(?:\s+for)?\s+['"]?([^'"]+)['"]?$/i],
+            // Add other patterns...
+        ]);
+    }
+
+    parse(input) {
+        for (const [type, pattern] of this.patterns) {
+            const match = input.match(pattern);
+            if (match) {
+                return { type, params: this.extractParams(type, match) };
+            }
+        }
+        return null;
+    }
+
+    extractParams(type, match) {
+        switch(type) {
+            case 'navigation':
+                return { url: match[1] };
+            case 'search':
+                return { query: match[1] };
+            // Add other parameter extractions...
+        }
+    }
+}
+
 class QAInterface {
     constructor() {
+        const elements = this.initializeUI();
+        this.elements = elements;
+        this.uiManager = new UIManager(elements);
+        this.commandParser = new CommandParser();
         this.commandProcessor = new CommandProcessor();
-        this.isProcessing = false;
-        this.isNavigating = false;
-        this.port = null;
         this.browserTabId = null;
-        
-        this.initializeUI();
-        this.connectToBackground();
+        this.isNavigating = false;
         this.setupEventListeners();
+        this.connectToBackground();
     }
 
     initializeUI() {
-        this.elements = {
+        return {
             chat: document.getElementById('chat'),
             input: document.getElementById('input'),
             sendButton: document.getElementById('sendButton')
@@ -119,224 +254,69 @@ class QAInterface {
                 await this.handleTabUpdate();
             } else if (msg.type === 'INIT_STATE') {
                 this.browserTabId = msg.browserTabId;
+                // Initialize browserTab when we get the ID
+                this.browserTab = new BrowserTabManager(this.browserTabId);
             }
         });
     }
 
     async handleCommand(userInput) {
-        if (!userInput.trim() || this.isProcessing) return;
+        if (!userInput.trim() || !this.browserTabId) {
+            console.log('⚠️ Invalid input or no browser tab ID');
+            return;
+        }
 
-        console.log('\u{27A1} Processing command:', userInput);
-        
+        console.log(`🎯 Processing command: "${userInput}"`);
         try {
-            this.toggleUI(false);
-            this.addToChat(userInput);
+            this.uiManager.toggleControls(false);
+            this.uiManager.addMessage(userInput, 'user');
 
-            const command = await this.commandProcessor.processCommand(userInput);
-            if (!command) {
-                console.log('\u{274C} Unknown command');
-                this.addToChat('Unknown command', 'error');
+            let commandData = null;
+
+            console.log('🔍 Attempting command processor');
+            commandData = await this.commandProcessor.processCommand(userInput);
+            
+            if (!commandData) {
+                console.log('🔍 Attempting command parser');
+                const parsedCommand = this.commandParser.parse(userInput);
+                if (parsedCommand) {
+                    commandData = parsedCommand;
+                }
+            }
+
+            if (!commandData) {
+                console.log('❌ Unknown command');
+                this.uiManager.addMessage('Unknown command', 'error');
                 return;
             }
 
-            console.log('\u{2713} Command parsed:', command);
-            await this.executeCommand(command);
+            console.log('✅ Command data:', commandData);
+            const command = CommandFactory.createCommand(
+                commandData.type,
+                commandData.params || commandData,
+                this.browserTab
+            );
+
+            if (command) {
+                console.log(`🚀 Executing command of type: ${commandData.type}`);
+                await command.execute();
+                this.isNavigating = true;
+                await this.captureAndShowScreenshot();
+            } else {
+                console.log('❌ Command not implemented');
+                this.uiManager.addMessage('Command not implemented', 'error');
+            }
+
         } catch (error) {
-            console.error('\u{274C} Command failed:', error);
-            this.addToChat(`Error: ${error.message}`, 'error');
+            console.error('❌ Command execution failed:', error);
+            this.uiManager.addMessage(`Error: ${error.message}`, 'error');
         } finally {
-            this.toggleUI(true);
+            this.uiManager.toggleControls(true);
         }
-    }
-
-    toggleUI(enabled) {
-        this.isProcessing = !enabled;
-        this.elements.input.disabled = !enabled;
-        this.elements.sendButton.disabled = !enabled;
-        this.elements.sendButton.style.backgroundColor = enabled ? '#2196f3' : '#cccccc';
-    }
-
-    addToChat(message, type = 'user') {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.textContent = message;
-        this.elements.chat.appendChild(messageDiv);
-        this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
     }
 
     async handleTabUpdate() {
-        await new Promise(resolve => setTimeout(resolve, 1000));
         await this.captureAndShowScreenshot();
-        this.toggleUI(true);
-    }
-
-    async executeCommand(command) {
-        switch (command.type) {
-            case 'navigation':
-                await this.handleNavigation(command.url);
-                break;
-            case 'search':
-                await this.handleSearch(command.query);
-                break;
-            case 'click':
-                this.isNavigating = true;
-                await this.handleClick(command.target);
-                break;
-            case 'scroll':
-                await this.handleScroll(command.direction);
-                break;
-            case 'back':
-                await this.handleBack();
-                break;
-            case 'forward':
-                this.isNavigating = true;
-                await this.handleForward();
-                break;
-            case 'refresh':
-                this.isNavigating = true;
-                await this.handleRefresh();
-                break;
-            case 'find':
-                await this.handleFind(command.text);
-                break;
-            case 'findAndClick':
-                await this.handleFindAndClick(command.text);
-                break;
-        }
-    }
-
-    async handleNavigation(url) {
-        if (!this.browserTabId) {
-            console.error('❌ No browser tab to control');
-            this.addToChat('Error: No browser tab to control', 'error');
-            return;
-        }
-
-        url = url.startsWith('http') ? url : `https://${url}`;
-        
-        try {
-            console.log('\u{27A1} Navigating to:', url);
-            this.addToChat(`Navigating to ${url}...`, 'assistant');
-            this.isNavigating = true;
-            await chrome.tabs.update(this.browserTabId, { url });
-        } catch (error) {
-            console.error('❌ Navigation failed:', error);
-            this.addToChat(`Navigation failed: ${error.message}`, 'error');
-            this.toggleUI(true);
-        }
-    }
-
-    async handleSearch(searchQuery) {
-        if (!this.browserTabId) {
-            console.error('❌ No browser tab to control');
-            this.addToChat('Error: No browser tab to control', 'error');
-            return;
-        }
-
-        try {
-            console.log('\u{1F50D} Searching for:', searchQuery);
-            this.addToChat(`Searching for "${searchQuery}"...`, 'assistant');
-            this.isNavigating = true;
-            await this.performSearch(searchQuery);
-        } catch (error) {
-            console.error('❌ Search failed:', error);
-            this.addToChat(`Search failed: ${error.message}`, 'error');
-            this.toggleUI(true);
-        }
-    }
-
-    async performSearch(query) {
-        const searchResult = await chrome.scripting.executeScript({
-            target: { tabId: this.browserTabId },
-            function: (query) => {
-                // Define site-specific search selectors
-                const siteSearchSelectors = {
-                    'amazon': {
-                        selectors: ['#twotabsearchtextbox', '#nav-search-keywords'],
-                        submit: '#nav-search-submit-button'
-                    },
-                    'ebay': {
-                        selectors: ['#gh-ac', '.gh-tb'],
-                        submit: '#gh-btn'
-                    },
-                    // Add more site-specific selectors as needed
-                };
-
-                // Get current domain
-                const domain = window.location.hostname;
-                
-                // Check if we have specific selectors for this site
-                for (const [site, config] of Object.entries(siteSearchSelectors)) {
-                    if (domain.includes(site)) {
-                        // Try site-specific selectors
-                        for (const selector of config.selectors) {
-                            const searchInput = document.querySelector(selector);
-                            if (searchInput && searchInput.offsetParent !== null) {
-                                searchInput.value = query;
-                                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                
-                                // Try to find and click submit button
-                                if (config.submit) {
-                                    const submitButton = document.querySelector(config.submit);
-                                    if (submitButton) {
-                                        submitButton.click();
-                                        return { success: true, method: 'site-specific' };
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Generic search selectors as fallback
-                const genericSelectors = [
-                    'input[type="search"]',
-                    'input[name*="search"]',
-                    'input[name="q"]',
-                    '.search-input',
-                    'input[aria-label*="search" i]',
-                    'input[placeholder*="search" i]'
-                ];
-
-                for (const selector of genericSelectors) {
-                    const searchInput = document.querySelector(selector);
-                    if (searchInput && searchInput.offsetParent !== null) {
-                        searchInput.value = query;
-                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        const form = searchInput.closest('form');
-                        if (form) {
-                            form.submit();
-                            return { success: true, method: 'form' };
-                        }
-                        
-                        searchInput.dispatchEvent(new KeyboardEvent('keypress', {
-                            key: 'Enter',
-                            code: 'Enter',
-                            keyCode: 13,
-                            bubbles: true
-                        }));
-                        return { success: true, method: 'enter' };
-                    }
-                }
-                return { success: false };
-            },
-            args: [query]
-        });
-
-        if (!searchResult[0].result.success) {
-            // Only fallback to Google if we're not already on a major e-commerce site
-            const tab = await chrome.tabs.get(this.browserTabId);
-            const url = new URL(tab.url);
-            const majorSites = ['amazon', 'ebay', 'walmart', 'target'];
-            
-            if (!majorSites.some(site => url.hostname.includes(site))) {
-                await this.handleNavigation(`google.com/search?q=${encodeURIComponent(query)}`);
-            } else {
-                console.error('❌ Search failed on e-commerce site');
-                this.addToChat('Could not find search box on this page', 'error');
-            }
-        }
     }
 
     async captureAndShowScreenshot() {
@@ -365,265 +345,7 @@ class QAInterface {
             this.elements.chat.appendChild(imgDiv);
             this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
         } catch (error) {
-            console.error('❌ Screenshot failed:', error);
-        }
-    }
-
-    async handleClick(target) {
-        const result = await chrome.scripting.executeScript({
-            target: { tabId: this.browserTabId },
-            function: (targetText) => {
-                // Find elements by text content, aria-label, or title
-                const elements = [...document.querySelectorAll('a, button, [role="button"], input[type="submit"]')]
-                    .filter(el => {
-                        const text = el.textContent?.trim().toLowerCase() || '';
-                        const ariaLabel = el.getAttribute('aria-label')?.toLowerCase() || '';
-                        const title = el.getAttribute('title')?.toLowerCase() || '';
-                        const targetLower = targetText.toLowerCase();
-                        return text.includes(targetLower) || 
-                               ariaLabel.includes(targetLower) || 
-                               title.includes(targetLower);
-                    });
-
-                if (elements.length > 0) {
-                    elements[0].click();
-                    return { success: true };
-                }
-                return { success: false };
-            },
-            args: [target]
-        });
-
-        if (!result[0].result.success) {
-            this.addToChat(`Could not find element "${target}" to click`, 'error');
-        }
-    }
-
-    async handleScroll(direction) {
-        await chrome.scripting.executeScript({
-            target: { tabId: this.browserTabId },
-            function: (dir) => {
-                switch (dir) {
-                    case 'up':
-                        window.scrollBy(0, -300);
-                        break;
-                    case 'down':
-                        window.scrollBy(0, 300);
-                        break;
-                    case 'top':
-                        window.scrollTo(0, 0);
-                        break;
-                    case 'bottom':
-                        window.scrollTo(0, document.body.scrollHeight);
-                        break;
-                }
-            },
-            args: [direction]
-        });
-    }
-
-    async handleBack() {
-        try {
-            console.log('\u{27A1} Going back');
-            this.addToChat('Going back...', 'assistant');
-            this.isNavigating = true;
-            
-            // Get current tab history
-            const tab = await chrome.tabs.get(this.browserTabId);
-            
-            // Execute the back command
-            await chrome.tabs.goBack(this.browserTabId);
-            
-            // Wait for navigation
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Take screenshot after navigation
-            await this.captureAndShowScreenshot();
-        } catch (error) {
-            console.error('\u{274C} Back navigation failed:', error);
-            this.addToChat(`Back navigation failed: ${error.message}`, 'error');
-            this.toggleUI(true);
-        }
-    }
-
-    async handleForward() {
-        try {
-            console.log('\u{27A1} Going forward');
-            this.addToChat('Going forward...', 'assistant');
-            this.isNavigating = true;
-            
-            // Get current tab history
-            const tab = await chrome.tabs.get(this.browserTabId);
-            
-            // Execute the forward command
-            await chrome.tabs.goForward(this.browserTabId);
-            
-            // Wait for navigation
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Take screenshot after navigation
-            await this.captureAndShowScreenshot();
-        } catch (error) {
-            console.error('\u{274C} Forward navigation failed:', error);
-            this.addToChat(`Forward navigation failed: ${error.message}`, 'error');
-            this.toggleUI(true);
-        }
-    }
-
-    async handleRefresh() {
-        await chrome.tabs.reload(this.browserTabId);
-        this.isNavigating = true;
-    }
-
-    async handleFind(text) {
-        try {
-            console.log('\u{1F50D} Finding text:', text);
-            this.addToChat(`Finding "${text}"...`, 'assistant');
-            
-            const result = await chrome.scripting.executeScript({
-                target: { tabId: this.browserTabId },
-                function: (searchText) => {
-                    // Remove existing highlights
-                    const oldHighlights = document.querySelectorAll('.qa-highlight');
-                    oldHighlights.forEach(h => {
-                        const parent = h.parentNode;
-                        parent.replaceChild(document.createTextNode(h.textContent), h);
-                        parent.normalize();
-                    });
-
-                    // Create TreeWalker to find text nodes
-                    const walker = document.createTreeWalker(
-                        document.body,
-                        NodeFilter.SHOW_TEXT,
-                        null,
-                        false
-                    );
-
-                    let node;
-                    let found = false;
-                    const searchRegex = new RegExp(searchText, 'gi');
-
-                    while (node = walker.nextNode()) {
-                        if (node.textContent.match(searchRegex)) {
-                            const span = document.createElement('span');
-                            span.className = 'qa-highlight';
-                            span.style.backgroundColor = '#ffeb3b';
-                            span.style.color = '#000';
-                            span.style.padding = '2px';
-                            span.style.borderRadius = '3px';
-                            span.textContent = node.textContent;
-                            node.parentNode.replaceChild(span, node);
-                            found = true;
-
-                            // Scroll to first match
-                            if (!document.querySelector('.qa-highlight')) {
-                                span.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'center'
-                                });
-                            }
-                        }
-                    }
-                    return { success: found, count: document.querySelectorAll('.qa-highlight').length };
-                },
-                args: [text]
-            });
-
-            const { success, count } = result[0].result;
-            if (success) {
-                this.addToChat(`Found ${count} matches for "${text}"`, 'assistant');
-                await this.captureAndShowScreenshot();
-            } else {
-                this.addToChat(`No matches found for "${text}"`, 'error');
-            }
-        } catch (error) {
-            console.error('\u{274C} Find failed:', error);
-            this.addToChat(`Find failed: ${error.message}`, 'error');
-        }
-    }
-
-    async handleFindAndClick(text) {
-        try {
-            console.log('\u{1F50D} Finding and clicking text:', text);
-            this.addToChat(`Finding and clicking "${text}"...`, 'assistant');
-            
-            const result = await chrome.scripting.executeScript({
-                target: { tabId: this.browserTabId },
-                function: (searchText) => {
-                    // Find clickable elements containing the text
-                    const elements = [
-                        // Direct elements
-                        ...document.querySelectorAll('a, button, [role="button"], input[type="submit"], [onclick], [class*="button"], [class*="btn"]'),
-                        // Image elements with alt text
-                        ...document.querySelectorAll('img[alt]'),
-                        // Elements with aria-label
-                        ...document.querySelectorAll('[aria-label]'),
-                        // Elements with title
-                        ...document.querySelectorAll('[title]')
-                    ].filter(el => {
-                        const text = el.textContent?.trim().toLowerCase() || '';
-                        const ariaLabel = el.getAttribute('aria-label')?.toLowerCase() || '';
-                        const title = el.getAttribute('title')?.toLowerCase() || '';
-                        const alt = el.getAttribute('alt')?.toLowerCase() || '';
-                        const targetLower = searchText.toLowerCase();
-                        
-                        // Check if element or its parent is clickable
-                        const isClickable = el.tagName === 'A' || 
-                                          el.tagName === 'BUTTON' ||
-                                          el.closest('a') ||
-                                          el.closest('button') ||
-                                          el.onclick ||
-                                          el.closest('[onclick]');
-                        
-                        return isClickable && (
-                            text.includes(targetLower) || 
-                            ariaLabel.includes(targetLower) || 
-                            title.includes(targetLower) ||
-                            alt.includes(targetLower)
-                        );
-                    });
-
-                    if (elements.length > 0) {
-                        // Get the actual clickable element (element itself or closest parent)
-                        const element = elements[0];
-                        const clickableElement = element.tagName === 'A' || element.tagName === 'BUTTON' 
-                            ? element 
-                            : element.closest('a, button, [onclick]') || element;
-
-                        // Highlight the element
-                        const span = document.createElement('span');
-                        span.className = 'qa-highlight qa-highlight-click';
-                        span.style.backgroundColor = '#4caf50';
-                        span.style.color = '#fff';
-                        span.style.padding = '2px';
-                        span.style.borderRadius = '3px';
-                        
-                        // Scroll element into view
-                        clickableElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-
-                        // Click after a short delay to show highlight
-                        setTimeout(() => clickableElement.click(), 500);
-                        return { success: true };
-                    }
-                    return { success: false };
-                },
-                args: [text]
-            });
-
-            if (result[0].result.success) {
-                this.addToChat(`Found and clicked "${text}"`, 'assistant');
-                this.isNavigating = true;  // In case click causes navigation
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                await this.captureAndShowScreenshot();
-            } else {
-                this.addToChat(`Could not find clickable element with text "${text}"`, 'error');
-            }
-        } catch (error) {
-            console.error('\u{274C} Find and click failed:', error);
-            this.addToChat(`Find and click failed: ${error.message}`, 'error');
+            this.handleError(error, 'Screenshot');
         }
     }
 
@@ -655,16 +377,257 @@ class QAInterface {
         });
 
         // Welcome message
-        this.addToChat(`Ready! Try commands like:
-- "go to google.com"
-- "search for 'something'"
-- "find 'text on page'"
-- "find and click 'text'"
-- "click on 'Login'"
-- "scroll down/up"
-- "go back"
-- "go forward"
-- "refresh"`, 'assistant');
+        this.elements.chat.innerHTML = '';
+        this.elements.chat.appendChild(document.createTextNode('Ready! Try commands like:'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "go to google.com"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "search for \'something\'"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "find \'text on page\'"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "find and click \'text\'"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "click on \'Login\'"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "scroll down/up"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "go back"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "go forward"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createTextNode('- "refresh"'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.appendChild(document.createElement('br'));
+        this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
+    }
+
+    handleError(error, operation) {
+        console.error(`❌ ${operation} failed:`, error);
+        this.uiManager.addMessage(`${operation} failed: ${error.message}`, 'error');
+        this.uiManager.toggleControls(true);
+    }
+}
+
+// Add missing command classes
+class SearchCommand extends Command {
+    constructor(query, browserTab) {
+        super();
+        this.query = query;
+        this.browserTab = browserTab;
+    }
+
+    async execute() {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(this.query)}`;
+        return await this.browserTab.navigate(searchUrl);
+    }
+}
+
+class BackCommand extends Command {
+    constructor(browserTab) {
+        super();
+        this.browserTab = browserTab;
+    }
+
+    async execute() {
+        return await chrome.tabs.goBack(this.browserTab.tabId);
+    }
+}
+
+class ForwardCommand extends Command {
+    constructor(browserTab) {
+        super();
+        this.browserTab = browserTab;
+    }
+
+    async execute() {
+        return await chrome.tabs.goForward(this.browserTab.tabId);
+    }
+}
+
+class RefreshCommand extends Command {
+    constructor(browserTab) {
+        super();
+        this.browserTab = browserTab;
+    }
+
+    async execute() {
+        return await chrome.tabs.reload(this.browserTab.tabId);
+    }
+}
+
+class ScrollCommand extends Command {
+    constructor(direction, browserTab) {
+        super();
+        this.direction = direction;
+        this.browserTab = browserTab;
+        console.log(`🔄 Creating ScrollCommand with direction: ${direction}`);
+    }
+
+    async execute() {
+        console.log(`🔄 Executing scroll ${this.direction}`);
+        const scrollScript = function(direction) {
+            console.log(`🔄 Running scroll script for direction: ${direction}`);
+            const scrollAmount = 300;
+            switch(direction.toLowerCase()) {
+                case 'up': 
+                    console.log('⬆️ Scrolling up');
+                    window.scrollBy({
+                        top: -scrollAmount,
+                        behavior: 'smooth'
+                    });
+                    break;
+                case 'down': 
+                    console.log('⬇️ Scrolling down');
+                    window.scrollBy({
+                        top: scrollAmount,
+                        behavior: 'smooth'
+                    });
+                    break;
+                case 'top': 
+                    console.log('⏫ Scrolling to top');
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                    break;
+                case 'bottom': 
+                    console.log('⏬ Scrolling to bottom');
+                    window.scrollTo({
+                        top: document.documentElement.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                    break;
+            }
+            return true;
+        };
+
+        try {
+            console.log('🔄 Executing scroll script via browserTab');
+            const result = await this.browserTab.executeScript(scrollScript, [this.direction]);
+            console.log('✅ Scroll result:', result);
+            return result;
+        } catch (error) {
+            console.error('❌ Scroll error:', error);
+            throw error;
+        }
+    }
+}
+
+// Add FindCommand and FindAndClickCommand
+class FindCommand extends Command {
+    constructor(text, browserTab) {
+        super();
+        this.text = text;
+        this.browserTab = browserTab;
+    }
+
+    async execute() {
+        const findScript = (searchText) => {
+            window.find(searchText);
+        };
+        return await this.browserTab.executeScript(findScript, [this.text]);
+    }
+}
+
+class FindAndClickCommand extends Command {
+    constructor(text, browserTab) {
+        super();
+        this.text = text;
+        this.browserTab = browserTab;
+        console.log(`🔍 Creating FindAndClickCommand for text: "${text}"`);
+    }
+
+    async execute() {
+        console.log(`🔍 Executing FindAndClickCommand for: "${this.text}"`);
+        const findAndClickScript = (searchText) => {
+            console.log(`🔍 Running find and click script for: "${searchText}"`);
+            
+            // Helper function to check if element is visible and clickable
+            const isVisible = (element) => {
+                const rect = element.getBoundingClientRect();
+                const style = window.getComputedStyle(element);
+                return style.display !== 'none' && 
+                       style.visibility !== 'hidden' && 
+                       style.opacity !== '0' &&
+                       rect.width > 0 &&
+                       rect.height > 0 &&
+                       rect.top < window.innerHeight &&
+                       rect.left < window.innerWidth;
+            };
+
+            // Helper function to get element text content
+            const getElementText = (element) => {
+                return (element.textContent || element.value || '').trim().toLowerCase();
+            };
+
+            // Helper function to simulate a more natural click
+            const simulateClick = (element) => {
+                // Try multiple click methods
+                try {
+                    // First try the click() method
+                    element.click();
+                    
+                    // If that didn't work, try dispatching events
+                    const clickEvent = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    element.dispatchEvent(clickEvent);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Click simulation failed:', error);
+                    return false;
+                }
+            };
+
+            // First try exact matches on interactive elements
+            const interactiveElements = [...document.querySelectorAll('button, a, input[type="submit"], input[type="button"], [role="button"], [onclick], [class*="button"], [class*="btn"]')]
+                .filter(el => isVisible(el) && 
+                    getElementText(el) === searchText.toLowerCase());
+
+            if (interactiveElements.length > 0) {
+                console.log('✅ Found exact match:', interactiveElements[0]);
+                return simulateClick(interactiveElements[0]);
+            }
+
+            // Then try contains on interactive elements
+            const containsElements = [...document.querySelectorAll('button, a, input[type="submit"], input[type="button"], [role="button"], [onclick], [class*="button"], [class*="btn"]')]
+                .filter(el => isVisible(el) && 
+                    getElementText(el).includes(searchText.toLowerCase()));
+
+            if (containsElements.length > 0) {
+                console.log('✅ Found partial match:', containsElements[0]);
+                return simulateClick(containsElements[0]);
+            }
+
+            // Finally, try any element with matching text
+            const allElements = [...document.querySelectorAll('*')]
+                .filter(el => isVisible(el) && 
+                    getElementText(el).includes(searchText.toLowerCase()));
+
+            if (allElements.length > 0) {
+                console.log('✅ Found element by text:', allElements[0]);
+                return simulateClick(allElements[0]);
+            }
+
+            console.log('❌ No matching clickable elements found');
+            return false;
+        };
+
+        try {
+            const result = await this.browserTab.executeScript(findAndClickScript, [this.text]);
+            console.log('FindAndClick result:', result);
+            if (!result?.[0]?.result) {
+                throw new Error(`Could not find or click element with text: "${this.text}"`);
+            }
+            return result;
+        } catch (error) {
+            console.error('❌ FindAndClick error:', error);
+            throw error;
+        }
     }
 }
 

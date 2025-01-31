@@ -7,7 +7,8 @@
   "permissions": [
     "activeTab",
     "tabs",
-    "scripting"
+    "scripting",
+    "scripting.executeScript"
   ],
   
   "host_permissions": [
@@ -15,21 +16,10 @@
   ],
   
   "action": {
-    "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
-    }
+    "default_title": "QA Testing Assistant"
   },
 
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
-
-  "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "service_worker": "background.js"
   }
 }

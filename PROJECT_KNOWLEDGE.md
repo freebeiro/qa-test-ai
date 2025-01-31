@@ -2,26 +2,40 @@
 
 ## Latest Improvements
 
-### Detached Window Implementation
-The extension now operates in a detached window mode, providing several advantages:
-- Movable window that stays open during navigation
-- Independent state management from browser tabs
-- Better user experience for long testing sessions
-- Reliable screenshot capture of browser content
+### Enhanced Command Processing
+- Improved command pattern matching
+- Better error handling and logging
+- Enhanced click detection and simulation
+- Smooth scrolling implementation
+- Comprehensive emoji-based logging
 
-### Enhanced Browser Control
+### Command System Architecture
+The system now uses a robust command pattern implementation:
+- Command interface with execute method
+- Concrete command classes for each action
+- Command factory for instantiation
+- Command processor for parsing and routing
+
+### Browser Control
 Improved handling of browser tabs and navigation:
 - Clear separation between chat window and target browser tab
 - Reliable navigation state management
-- Proper event handling for tab updates
-- Screenshot capture of correct browser content
+- Enhanced script execution
+- Better screenshot capture
 
-### Search Functionality
-Smart search handling across websites:
-- Attempts to use site's native search first
-- Falls back to Google search if needed
-- Maintains window state during search
-- Captures search results automatically
+### Click Detection
+Advanced element detection and clicking:
+- Multiple detection strategies
+  - Exact matches on interactive elements
+  - Partial matches on interactive elements
+  - Text-based element matching
+- Visibility checking
+- Multiple click simulation methods
+- Comprehensive error handling
+
+## Core Components
+
+### Command Classes
 
 ## Core Architecture Overview
 

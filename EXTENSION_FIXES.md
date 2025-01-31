@@ -1,34 +1,34 @@
 # Chrome Extension Major Improvements
 
-## Key Features Added/Fixed
+## Latest Fixes and Enhancements
 
-1. Detached Window Implementation
-- Converted from popup to detached window
-- Independent window that can be moved around
-- Maintains state during navigation
-- Proper window management and focus handling
+1. Command Processing
+- Enhanced pattern matching for commands
+- Better error handling and recovery
+- Improved command factory implementation
+- Clear separation of concerns
 
-2. Navigation Control
-- Separate browser tab control
-- Independent chat window
-- Proper state management between windows
-- Navigation without losing chat window
+2. Click Detection
+- Multiple detection strategies
+- Smart element visibility checking
+- Enhanced click simulation
+- Better error handling
 
-3. Screenshot Functionality
-- Captures correct browser tab (not chat window)
-- Maintains window states during capture
-- Proper error handling
-- Clear feedback in chat
+3. Scroll Functionality
+- Smooth scrolling behavior
+- Multiple scroll directions
+- Better position tracking
+- Clear visual feedback
 
-4. Button and UI Improvements
-- Reliable send button functionality
-- Enter key support
-- Proper state management during commands
-- Visual feedback during actions
+4. Logging System
+- Comprehensive emoji-based logging
+- Clear error messages
+- Better debugging information
+- Status tracking
 
 ## Technical Implementation Details
 
-### 1. Window Management
+### Command Processing
 ```javascript
 // Background script manages windows
 chrome.action.onClicked.addListener(async (tab) => {
