@@ -19,21 +19,42 @@ class CommandProcessor {
 
     parseCommand(input) {
         const commands = [
-            // Navigation commands first
+            // Simplified back/forward commands
             {
                 type: 'back',
-                pattern: /^(?:go\s+)?back$/i,
+                pattern: /^back$/i,
                 handler: () => ({ type: 'back' })
             },
             {
                 type: 'forward',
-                pattern: /^(?:go\s+)?forward$/i,
+                pattern: /^forward$/i,
                 handler: () => ({ type: 'forward' })
+            },
+            // Google search command (should come before navigation command)
+            {
+                type: 'navigation',
+                pattern: /^google\s+(.+)$/i,
+                handler: (match) => ({ 
+                    type: 'navigation', 
+                    url: `https://www.google.com/search?q=${encodeURIComponent(match[1])}`,
+                    skipFirstResult: true // Add flag to prevent auto-clicking first result
+                })
+            },
+
+            // Regular navigation command
+            {
+                type: 'navigation',
+                pattern: /^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i,
+                handler: (match) => ({ 
+                    type: 'navigation', 
+                    url: match[1].toLowerCase(),
+                    skipFirstResult: false // Will click first result if needed
+                })
             },
             // Find and click before find to prevent pattern overlap
             {
                 type: 'findAndClick',
-                pattern: /^find\s+and\s+click\s+(?:text\s+)?(?:["']([^"']+)["']|(\S+(?:\s+\S+)*))$/i,
+                pattern: /^enter\s+(?:text\s+)?(?:["']([^"']+)["']|(\S+(?:\s+\S+)*))$/i,
                 handler: (match) => ({ type: 'findAndClick', text: match[1] || match[2] })
             },
             // Then find
@@ -41,12 +62,6 @@ class CommandProcessor {
                 type: 'find',
                 pattern: /^find\s+(?:text\s+)?(?:["']([^"']+)["']|(\S+(?:\s+\S+)*))$/i,
                 handler: (match) => ({ type: 'find', text: match[1] || match[2] })
-            },
-            // Navigation with specific pattern
-            {
-                type: 'navigation',
-                pattern: /^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i,
-                handler: (match) => ({ type: 'navigation', url: match[1] })
             },
             // Search with specific pattern
             {
@@ -70,16 +85,83 @@ class CommandProcessor {
                 pattern: /^(?:refresh|reload)$/i,
                 handler: () => ({ type: 'refresh' })
             },
+            // Enhanced click patterns
+            {
+                type: 'smartClick',
+                pattern: /^(?:click|select)\s+(?:on\s+)?(?:the\s+)?(\d+(?:st|nd|rd|th)|first|last|)\s*(?:item\s+)?(?:with\s+)?(?:price\s+(\d+[.,]\d+)|between\s+(\d+[.,]\d+)\s+and\s+(\d+[.,]\d+)|containing\s+"([^"]+)")/i,
+                handler: (match) => ({
+                    type: 'smartClick',
+                    index: this.parseIndex(match[1]),
+                    price: match[2] ? parseFloat(match[2].replace(',', '.')) : null,
+                    priceRange: match[3] && match[4] ? {
+                        min: parseFloat(match[3].replace(',', '.')),
+                        max: parseFloat(match[4].replace(',', '.'))
+                    } : null,
+                    text: match[5]
+                })
+            },
+            // Enhanced product selection commands
+            {
+                type: 'smartFind',
+                pattern: /^enter\s+(?:the\s+)?(\d+(?:st|nd|rd|th)|first|last)?\s*(?:item|product)?\s*(?:with|containing)?\s*(?:price\s+(\d+[.,]\d+)|between\s+(\d+[.,]\d+)\s+and\s+(\d+[.,]\d+)|"([^"]+)")/i,
+                handler: (match) => ({
+                    type: 'smartFind',
+                    options: {
+                        index: this.parseIndex(match[1]),
+                        price: match[2] ? parseFloat(match[2].replace(',', '.')) : null,
+                        priceRange: match[3] && match[4] ? {
+                            min: parseFloat(match[3].replace(',', '.')),
+                            max: parseFloat(match[4].replace(',', '.'))
+                        } : null,
+                        text: match[5]
+                    }
+                })
+            },
+            // Site search command (before the Google search pattern)
+            {
+                type: 'search',
+                pattern: /^search\s+(.+)$/i,
+                handler: (match) => ({ 
+                    type: 'search', 
+                    query: match[1].replace(/['"]/g, '') // Remove quotes if present
+                })
+            },
         ];
 
         for (const command of commands) {
             const match = input.match(command.pattern);
             if (match) {
+                console.log(`✅ Command matched pattern: ${command.type}`);
                 return command.handler(match);
             }
         }
 
-        return null;
+        throw new Error('Unknown command');
+    }
+
+    parseIndex(indexStr) {
+        if (!indexStr) return 0;
+        const indexMap = {
+            'first': 0,
+            'second': 1,
+            'third': 2,
+            'last': 'last',
+            // Handle numeric indices (1st, 2nd, etc)
+            ...Object.fromEntries(
+                Array.from({length: 10}, (_, i) => 
+                    [`${i + 1}${this.getOrdinalSuffix(i + 1)}`, i]
+                )
+            )
+        };
+        return indexMap[indexStr.toLowerCase()] ?? 0;
+    }
+
+    getOrdinalSuffix(i) {
+        const j = i % 10, k = i % 100;
+        if (j == 1 && k != 11) return "st";
+        if (j == 2 && k != 12) return "nd";
+        if (j == 3 && k != 13) return "rd";
+        return "th";
     }
 }
 
@@ -92,14 +174,115 @@ class Command {
 
 // Concrete commands
 class NavigationCommand extends Command {
-    constructor(url, browserTab) {
+    constructor(url, browserTab, skipFirstResult = false) {
         super();
         this.url = url;
         this.browserTab = browserTab;
+        this.skipFirstResult = skipFirstResult;
+        console.log(`🌐 Creating NavigationCommand for: ${this.url} (skipFirstResult: ${skipFirstResult})`);
     }
 
     async execute() {
-        return await this.browserTab.navigate(this.url);
+        try {
+            const formattedUrl = this.formatUrl(this.url);
+            
+            if (formattedUrl && !this.skipFirstResult) {
+                console.log(`🌐 Attempting direct navigation to: ${formattedUrl}`);
+                await this.browserTab.navigate(formattedUrl);
+
+                // Wait for page load
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                try {
+                    // Check if page loaded successfully
+                    const checkPageScript = () => {
+                        const errorTexts = [
+                            "This site can't be reached",
+                            "DNS_PROBE_POSSIBLE",
+                            "ERR_NAME_NOT_RESOLVED",
+                            "ERR_CONNECTION_REFUSED",
+                            "showing error page"
+                        ];
+                        
+                        const pageText = document.body.innerText;
+                        return errorTexts.some(error => pageText.includes(error));
+                    };
+
+                    const hasError = await this.browserTab.executeScript(checkPageScript);
+                    
+                    // If script execution failed or error detected, fall back to Google search
+                    if (hasError?.[0] || !hasError) {
+                        console.log('🔄 Page error detected, falling back to Google search');
+                        return await this.handleGoogleSearch();
+                    }
+
+                    // Take screenshot of successful navigation
+                    await this.browserTab.captureScreenshot();
+                    return true;
+
+                } catch (scriptError) {
+                    console.log('🔄 Script execution failed, falling back to Google search');
+                    return await this.handleGoogleSearch();
+                }
+            }
+
+            // If no direct URL, do Google search
+            return await this.handleGoogleSearch();
+
+        } catch (error) {
+            console.error('❌ Navigation error:', error);
+            throw error;
+        }
+    }
+
+    async handleGoogleSearch() {
+        console.log(`🔍 Searching Google for: ${this.url}`);
+        const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(this.url)}`;
+        await this.browserTab.navigate(googleUrl);
+        
+        // Wait for Google results and take screenshot
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await this.browserTab.captureScreenshot();
+        
+        if (!this.skipFirstResult) {
+            // Click first result
+            const clickFirstResult = () => {
+                const searchResults = document.querySelectorAll('#search .g a');
+                if (searchResults.length > 0) {
+                    const firstResult = searchResults[0];
+                    console.log('🎯 Clicking first result:', firstResult.href);
+                    firstResult.click();
+                    return firstResult.href;
+                }
+                return false;
+            };
+
+            const result = await this.browserTab.executeScript(clickFirstResult);
+            if (!result?.[0]) {
+                throw new Error('Could not find search results');
+            }
+
+            // Wait for destination page and take screenshot
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await this.browserTab.captureScreenshot();
+        }
+
+        return true;
+    }
+
+    formatUrl(url) {
+        // If it's already a full URL, return it
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+
+        // If it contains a dot, treat it as a domain
+        if (url.includes('.')) {
+            return `https://${url.startsWith('www.') ? '' : 'www.'}${url}`;
+        }
+
+        // Otherwise, return null to indicate we should search
+        return null;
     }
 }
 
@@ -108,7 +291,7 @@ class CommandFactory {
     static createCommand(type, params, browserTab) {
         switch(type) {
             case 'navigation':
-                return new NavigationCommand(params.url, browserTab);
+                return new NavigationCommand(params.url, browserTab, params.skipFirstResult);
             case 'search':
                 return new SearchCommand(params.query, browserTab);
             case 'back':
@@ -131,13 +314,28 @@ class CommandFactory {
 
 // Browser tab management
 class BrowserTabManager {
-    constructor(tabId) {
-        this.tabId = tabId;
-        console.log(`🔧 Initializing BrowserTabManager with tabId: ${tabId}`);
+    constructor() {
+        this.tabId = null;
+        this.port = null;
+        this.initializeConnection();
+        console.log('🔧 Initializing BrowserTabManager');
+    }
+
+    initializeConnection() {
+        this.port = chrome.runtime.connect({ name: "qa-window" });
+        
+        this.port.onMessage.addListener((message) => {
+            if (message.type === 'INIT_STATE') {
+                this.tabId = message.browserTabId;
+                console.log(`🔧 Initialized with browser tab ID: ${this.tabId}`);
+            }
+        });
     }
 
     async navigate(url) {
-        url = url.startsWith('http') ? url : `https://${url}`;
+        if (!this.tabId) {
+            throw new Error('Browser tab ID not initialized');
+        }
         return await chrome.tabs.update(this.tabId, { url });
     }
 
@@ -220,192 +418,161 @@ class CommandParser {
 
 class QAInterface {
     constructor() {
-        const elements = this.initializeUI();
-        this.elements = elements;
-        this.uiManager = new UIManager(elements);
-        this.commandParser = new CommandParser();
+        // Initialize components
         this.commandProcessor = new CommandProcessor();
-        this.browserTabId = null;
-        this.isNavigating = false;
-        this.setupEventListeners();
-        this.connectToBackground();
-    }
-
-    initializeUI() {
-        return {
-            chat: document.getElementById('chat'),
-            input: document.getElementById('input'),
-            sendButton: document.getElementById('sendButton')
-        };
-    }
-
-    connectToBackground() {
-        try {
-            this.port = chrome.runtime.connect({name: "qa-window"});
-            this.setupPortListeners();
-        } catch (error) {
-            console.error('Failed to connect to background:', error);
+        this.browserTab = new BrowserTabManager();
+        this.chatHistory = [];
+        
+        // Get DOM elements
+        this.input = document.querySelector('#command-input');
+        this.sendButton = document.querySelector('#send-button');
+        this.screenshotDiv = document.querySelector('#screenshot');
+        
+        if (!this.input || !this.sendButton || !this.screenshotDiv) {
+            console.error('❌ Required DOM elements not found');
+            return;
         }
+
+        this.setupEventListeners();
+        console.log('🔧 QAInterface initialized');
     }
 
-    setupPortListeners() {
-        this.port.onMessage.addListener(async (msg) => {
-            if (msg.type === 'TAB_UPDATED' && msg.status === 'complete' && this.isNavigating) {
-                await this.handleTabUpdate();
-            } else if (msg.type === 'INIT_STATE') {
-                this.browserTabId = msg.browserTabId;
-                // Initialize browserTab when we get the ID
-                this.browserTab = new BrowserTabManager(this.browserTabId);
+    setupEventListeners() {
+        // Send button click
+        this.sendButton.addEventListener('click', () => {
+            const command = this.input.value.trim();
+            if (command) {
+                this.handleCommand(command);
+            }
+        });
+
+        // Enter key press
+        this.input.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                const command = this.input.value.trim();
+                if (command) {
+                    this.handleCommand(command);
+                }
             }
         });
     }
 
-    async handleCommand(userInput) {
-        if (!userInput.trim() || !this.browserTabId) {
-            console.log('⚠️ Invalid input or no browser tab ID');
-            return;
-        }
+    addToChatHistory(entry) {
+        this.chatHistory.push(entry);
+        this.updateChatDisplay();
+    }
 
-        console.log(`🎯 Processing command: "${userInput}"`);
-        try {
-            this.uiManager.toggleControls(false);
-            this.uiManager.addMessage(userInput, 'user');
-
-            let commandData = null;
-
-            console.log('🔍 Attempting command processor');
-            commandData = await this.commandProcessor.processCommand(userInput);
+    updateChatDisplay() {
+        this.screenshotDiv.innerHTML = '';
+        
+        this.chatHistory.forEach((entry, index) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-entry';
             
-            if (!commandData) {
-                console.log('🔍 Attempting command parser');
-                const parsedCommand = this.commandParser.parse(userInput);
-                if (parsedCommand) {
-                    commandData = parsedCommand;
-                }
+            // Add command text
+            const commandDiv = document.createElement('div');
+            commandDiv.className = 'command-text';
+            commandDiv.textContent = `> ${entry.command}`;
+            messageDiv.appendChild(commandDiv);
+
+            // Add screenshots if any
+            if (entry.screenshots && entry.screenshots.length > 0) {
+                const screenshotsDiv = document.createElement('div');
+                screenshotsDiv.className = 'screenshots-container';
+                
+                entry.screenshots.forEach((screenshot, idx) => {
+                    const imgWrapper = document.createElement('div');
+                    imgWrapper.className = 'screenshot-wrapper';
+                    
+                    const img = document.createElement('img');
+                    img.src = screenshot.data;
+                    img.alt = `Step ${idx + 1}`;
+                    
+                    const caption = document.createElement('div');
+                    caption.className = 'screenshot-caption';
+                    caption.textContent = screenshot.caption || `Step ${idx + 1}`;
+                    
+                    imgWrapper.appendChild(img);
+                    imgWrapper.appendChild(caption);
+                    screenshotsDiv.appendChild(imgWrapper);
+                });
+                
+                messageDiv.appendChild(screenshotsDiv);
             }
 
-            if (!commandData) {
-                console.log('❌ Unknown command');
-                this.uiManager.addMessage('Unknown command', 'error');
-                return;
+            // Add any error messages
+            if (entry.error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = entry.error;
+                messageDiv.appendChild(errorDiv);
             }
 
-            console.log('✅ Command data:', commandData);
-            const command = CommandFactory.createCommand(
-                commandData.type,
-                commandData.params || commandData,
-                this.browserTab
-            );
+            this.screenshotDiv.appendChild(messageDiv);
+        });
 
-            if (command) {
-                console.log(`🚀 Executing command of type: ${commandData.type}`);
-                await command.execute();
-                this.isNavigating = true;
-                await this.captureAndShowScreenshot();
-            } else {
-                console.log('❌ Command not implemented');
-                this.uiManager.addMessage('Command not implemented', 'error');
+        // Scroll to bottom
+        this.screenshotDiv.scrollTop = this.screenshotDiv.scrollHeight;
+    }
+
+    async handleCommand(command) {
+        const chatEntry = {
+            command,
+            screenshots: [],
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            this.disableUI();
+            
+            const commandData = await this.commandProcessor.processCommand(command);
+            if (!commandData) {
+                throw new Error('Invalid command');
+            }
+
+            const cmd = this.createCommand(commandData);
+            if (!cmd) {
+                throw new Error('Command creation failed');
+            }
+
+            await cmd.execute();
+            
+            // Capture final screenshot
+            const screenshot = await this.browserTab.captureScreenshot();
+            if (screenshot) {
+                chatEntry.screenshots.push({
+                    data: screenshot,
+                    caption: 'Result'
+                });
             }
 
         } catch (error) {
             console.error('❌ Command execution failed:', error);
-            this.uiManager.addMessage(`Error: ${error.message}`, 'error');
+            chatEntry.error = error.message;
         } finally {
-            this.uiManager.toggleControls(true);
+            this.addToChatHistory(chatEntry);
+            this.enableUI();
         }
     }
 
-    async handleTabUpdate() {
-        await this.captureAndShowScreenshot();
+    disableUI() {
+        this.input.disabled = true;
+        this.sendButton.disabled = true;
     }
 
-    async captureAndShowScreenshot() {
-        if (!this.browserTabId) {
-            console.error('❌ No browser tab to screenshot');
-            return;
-        }
-
-        try {
-            console.log('\u{1F4F7} Taking screenshot');
-            const tab = await chrome.tabs.get(this.browserTabId);
-            const screenshot = await chrome.tabs.captureVisibleTab(tab.windowId, {
-                format: 'png',
-                quality: 100
-            });
-            
-            console.log('\u{2713} Screenshot captured');
-            const imgDiv = document.createElement('div');
-            imgDiv.className = 'screenshot';
-            const img = document.createElement('img');
-            img.src = screenshot;
-            img.style.maxWidth = '100%';
-            img.style.border = '1px solid #ddd';
-            img.style.borderRadius = '4px';
-            imgDiv.appendChild(img);
-            this.elements.chat.appendChild(imgDiv);
-            this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
-        } catch (error) {
-            this.handleError(error, 'Screenshot');
-        }
+    enableUI() {
+        this.input.disabled = false;
+        this.sendButton.disabled = false;
+        this.input.focus();
     }
 
-    setupEventListeners() {
-        this.elements.sendButton.addEventListener('click', () => {
-            const userInput = this.elements.input.value.trim();
-            if (userInput) {
-                this.elements.input.value = '';
-                this.handleCommand(userInput);
-            }
-        });
-
-        this.elements.input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                const userInput = this.elements.input.value.trim();
-                if (userInput) {
-                    e.preventDefault();
-                    this.elements.input.value = '';
-                    this.handleCommand(userInput);
-                }
-            }
-        });
-
-        // Auto-resize textarea
-        this.elements.input.addEventListener('input', () => {
-            const textarea = this.elements.input;
-            textarea.style.height = 'auto';  // Reset height
-            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';  // Set new height with max limit
-        });
-
-        // Welcome message
-        this.elements.chat.innerHTML = '';
-        this.elements.chat.appendChild(document.createTextNode('Ready! Try commands like:'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "go to google.com"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "search for \'something\'"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "find \'text on page\'"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "find and click \'text\'"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "click on \'Login\'"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "scroll down/up"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "go back"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "go forward"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createTextNode('- "refresh"'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.appendChild(document.createElement('br'));
-        this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
-    }
-
-    handleError(error, operation) {
-        console.error(`❌ ${operation} failed:`, error);
-        this.uiManager.addMessage(`${operation} failed: ${error.message}`, 'error');
-        this.uiManager.toggleControls(true);
+    createCommand(commandData) {
+        return CommandFactory.createCommand(
+            commandData.type, 
+            commandData.params || commandData, 
+            this.browserTab
+        );
     }
 }
 
@@ -415,11 +582,120 @@ class SearchCommand extends Command {
         super();
         this.query = query;
         this.browserTab = browserTab;
+        console.log(`🔍 Creating SearchCommand for query: "${query}"`);
     }
 
     async execute() {
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(this.query)}`;
-        return await this.browserTab.navigate(searchUrl);
+        console.log(`🔍 Executing SearchCommand for: "${this.query}"`);
+        
+        const searchScript = (searchQuery) => {
+            console.log(`🔍 Running search script for: "${searchQuery}"`);
+            
+            const findSearchElements = () => {
+                // Priority-based search input selectors
+                const searchInputSelectors = [
+                    // Priority 1: Standard search inputs
+                    'input[type="search"]',
+                    'input[role="search"]',
+                    
+                    // Priority 2: Common search patterns
+                    'input[name="q"]',
+                    'input[name="query"]',
+                    'input[name="search"]',
+                    
+                    // Priority 3: Attribute-based search
+                    'input[id*="search" i]',
+                    'input[class*="search" i]',
+                    'input[placeholder*="search" i]',
+                    'input[aria-label*="search" i]',
+                    
+                    // Priority 4: Generic form inputs
+                    'form input[type="text"]'
+                ];
+
+                // Find search input
+                let searchInput = null;
+                for (const selector of searchInputSelectors) {
+                    const input = document.querySelector(selector);
+                    if (input && input.offsetParent !== null) {
+                        searchInput = input;
+                        break;
+                    }
+                }
+
+                // Find associated search button
+                let searchButton = null;
+                if (searchInput?.form) {
+                    const buttonSelectors = [
+                        'button[type="submit"]',
+                        'input[type="submit"]',
+                        'button[aria-label*="search" i]',
+                        'button[title*="search" i]',
+                        '[role="button"][aria-label*="search" i]'
+                    ];
+
+                    for (const selector of buttonSelectors) {
+                        const button = searchInput.form.querySelector(selector);
+                        if (button && button.offsetParent !== null) {
+                            searchButton = button;
+                            break;
+                        }
+                    }
+                }
+
+                return { searchInput, searchButton };
+            };
+
+            const { searchInput, searchButton } = findSearchElements();
+
+            if (!searchInput) {
+                console.log('❌ No search input found');
+                return { success: false, message: 'No search input found' };
+            }
+
+            // Fill and trigger input events
+            searchInput.value = searchQuery;
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Try different submission methods
+            if (searchButton) {
+                console.log('🔍 Clicking search button');
+                searchButton.click();
+                return { success: true, message: 'Search button clicked' };
+            }
+
+            if (searchInput.form) {
+                console.log('🔍 Submitting search form');
+                searchInput.form.submit();
+                return { success: true, message: 'Form submitted' };
+            }
+
+            // Last resort: simulate Enter key
+            console.log('🔍 Simulating Enter key');
+            searchInput.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Enter',
+                code: 'Enter',
+                keyCode: 13,
+                bubbles: true
+            }));
+            
+            return { success: true, message: 'Enter key pressed' };
+        };
+
+        try {
+            const result = await this.browserTab.executeScript(searchScript, [this.query]);
+            console.log('🔍 Search result:', result?.[0]);
+            
+            // Wait for search results and take screenshot
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await this.browserTab.captureScreenshot();
+            
+            return result;
+        } catch (error) {
+            console.error('❌ Search error:', error);
+            throw error;
+        }
     }
 }
 
@@ -427,10 +703,22 @@ class BackCommand extends Command {
     constructor(browserTab) {
         super();
         this.browserTab = browserTab;
+        console.log('⬅️ Creating BackCommand');
     }
 
     async execute() {
-        return await chrome.tabs.goBack(this.browserTab.tabId);
+        console.log('⬅️ Executing back command');
+        try {
+            await chrome.tabs.goBack(this.browserTab.tabId);
+            // Wait for navigation
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Take screenshot of new page
+            await this.browserTab.captureScreenshot();
+            return true;
+        } catch (error) {
+            console.error('❌ Back navigation failed:', error);
+            throw error;
+        }
     }
 }
 
@@ -438,10 +726,22 @@ class ForwardCommand extends Command {
     constructor(browserTab) {
         super();
         this.browserTab = browserTab;
+        console.log('➡️ Creating ForwardCommand');
     }
 
     async execute() {
-        return await chrome.tabs.goForward(this.browserTab.tabId);
+        console.log('➡️ Executing forward command');
+        try {
+            await chrome.tabs.goForward(this.browserTab.tabId);
+            // Wait for navigation
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Take screenshot of new page
+            await this.browserTab.captureScreenshot();
+            return true;
+        } catch (error) {
+            console.error('❌ Forward navigation failed:', error);
+            throw error;
+        }
     }
 }
 
@@ -626,6 +926,151 @@ class FindAndClickCommand extends Command {
             return result;
         } catch (error) {
             console.error('❌ FindAndClick error:', error);
+            throw error;
+        }
+    }
+}
+
+class SmartFindAndClickCommand extends Command {
+    constructor(options, browserTab) {
+        super();
+        this.options = options; // { text, index, price, priceRange }
+        this.browserTab = browserTab;
+        console.log(`🔍 Creating SmartFindAndClickCommand with options:`, options);
+    }
+
+    async execute() {
+        const findAndClickScript = (options) => {
+            console.log(`🔍 Running smart find and click script with options:`, options);
+            
+            // Helper function to check if element is visible
+            const isVisible = (element) => {
+                const rect = element.getBoundingClientRect();
+                const style = window.getComputedStyle(element);
+                return style.display !== 'none' && 
+                       style.visibility !== 'hidden' && 
+                       style.opacity !== '0' &&
+                       rect.width > 0 &&
+                       rect.height > 0;
+            };
+
+            // Helper to extract price from text
+            const extractPrice = (text) => {
+                const priceMatch = text.match(/[0-9]+[.,][0-9]+/);
+                return priceMatch ? parseFloat(priceMatch[0].replace(',', '.')) : null;
+            };
+
+            // Helper to get product information
+            const getProductInfo = (element) => {
+                const text = element.textContent.toLowerCase();
+                const priceElement = element.querySelector('[class*="price"], [class*="valor"], .price, .valor');
+                const price = priceElement ? extractPrice(priceElement.textContent) : null;
+                
+                return {
+                    element,
+                    text,
+                    price,
+                    visible: isVisible(element)
+                };
+            };
+
+            // Find all product-like containers
+            const findProducts = () => {
+                const productSelectors = [
+                    '[class*="product"]',
+                    '[class*="item"]',
+                    'article',
+                    '.product',
+                    '.item',
+                    'li'
+                ];
+                
+                const products = [];
+                productSelectors.forEach(selector => {
+                    document.querySelectorAll(selector).forEach(element => {
+                        products.push(getProductInfo(element));
+                    });
+                });
+                
+                return [...new Set(products)];
+            };
+
+            // Smart matching function
+            const matchesProduct = (product, options) => {
+                if (!product.visible) return false;
+
+                // Text matching
+                if (options.text) {
+                    const searchTerms = options.text.toLowerCase().split(' ');
+                    if (!searchTerms.every(term => product.text.includes(term))) {
+                        return false;
+                    }
+                }
+
+                // Price matching
+                if (options.price && product.price !== options.price) {
+                    return false;
+                }
+
+                // Price range matching
+                if (options.priceRange) {
+                    if (!product.price || 
+                        product.price < options.priceRange.min || 
+                        product.price > options.priceRange.max) {
+                        return false;
+                    }
+                }
+
+                return true;
+            };
+
+            // Find matching products
+            const products = findProducts();
+            console.log(`📦 Found ${products.length} potential products`);
+            
+            const matches = products.filter(product => matchesProduct(product, options));
+            console.log(`✨ Found ${matches.length} matching products`);
+
+            if (matches.length === 0) {
+                console.log('❌ No matching products found');
+                return { success: false, message: 'No matching products found' };
+            }
+
+            // Handle index selection
+            let selectedProduct;
+            if (typeof options.index === 'number') {
+                selectedProduct = matches[options.index];
+            } else if (options.index === 'last') {
+                selectedProduct = matches[matches.length - 1];
+            } else {
+                selectedProduct = matches[0];
+            }
+
+            if (!selectedProduct) {
+                return { success: false, message: 'Selected product index out of range' };
+            }
+
+            // Scroll product into view if needed
+            selectedProduct.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Click the product
+            try {
+                selectedProduct.element.click();
+                return { success: true, message: 'Product clicked successfully' };
+            } catch (error) {
+                console.error('Click failed:', error);
+                return { success: false, message: 'Failed to click product' };
+            }
+        };
+
+        try {
+            const result = await this.browserTab.executeScript(findAndClickScript, [this.options]);
+            if (!result?.[0]?.success) {
+                throw new Error(result?.[0]?.message || 'Failed to find or click product');
+            }
+            return result;
+        } catch (error) {
+            console.error('❌ SmartFindAndClick error:', error);
             throw error;
         }
     }
