@@ -1,0 +1,36 @@
+{
+  "name": "qa-testing-assistant",
+  "version": "1.0.0",
+  "description": "QA Testing Assistant Chrome Extension",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "init": "node scripts/init.js",
+    "prebuild": "npm run clean && npm run init",
+    "build": "webpack --mode production --config webpack.config.cjs",
+    "postbuild": "node -e \"console.log('Build completed, checking files...'); require('fs').readdirSync('./dist').forEach(f => console.log('📦', f))\"",
+    "watch": "webpack --mode development --watch --config webpack.config.cjs",
+    "dev": "webpack serve --mode development --config webpack.config.cjs"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.7",
+    "@babel/plugin-transform-runtime": "^7.25.9",
+    "@babel/preset-env": "^7.26.7",
+    "@types/chrome": "^0.0.260",
+    "@types/node": "^22.13.0",
+    "babel-loader": "^9.2.1",
+    "copy-webpack-plugin": "^12.0.2",
+    "core-js": "^3.40.0",
+    "css-loader": "^6.7.1",
+    "dotenv": "^16.4.7",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.6.1",
+    "style-loader": "^3.3.1",
+    "ts-loader": "^9.5.2",
+    "typescript": "^4.9.5",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^4.10.0"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.26.7"
+  }
+}

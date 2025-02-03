@@ -2,23 +2,21 @@
   "manifest_version": 3,
   "name": "QA Testing Assistant",
   "version": "1.0",
-  "description": "Assistant for QA testing",
-  
+  "description": "AI-powered QA Testing Assistant",
   "permissions": [
-    "activeTab",
     "tabs",
+    "activeTab",
     "scripting",
-    "scripting.executeScript"
+    "windows",
+    "tabCapture",
+    "system.display"
   ],
-  
   "host_permissions": [
     "<all_urls>"
   ],
-  
   "action": {
     "default_title": "QA Testing Assistant"
   },
-
   "background": {
     "service_worker": "background.js"
   }

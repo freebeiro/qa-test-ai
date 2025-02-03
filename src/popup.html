@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QA Testing Assistant</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="titlebar">
+        <div class="window-controls">
+            <button class="window-control close"></button>
+            <button class="window-control minimize"></button>
+            <button class="window-control maximize"></button>
+        </div>
+        <div class="titlebar-title">QA Testing Assistant</div>
+    </div>
+    <div class="chat-container" id="chatHistory"></div>
+    <div class="input-container">
+        <input 
+            type="text" 
+            id="commandInput" 
+            placeholder="Type a command..."
+            autocomplete="off"
+            spellcheck="false"
+        >
+        <button id="sendButton">Send</button>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
