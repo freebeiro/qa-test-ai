@@ -1,0 +1,141 @@
+.highlight-wrapper {
+    position: absolute !important;
+    pointer-events: none !important;
+    z-index: 9999 !important;
+}
+
+/* Different colors for different element types */
+.interactive-highlight {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 2px solid !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 3px !important;
+    pointer-events: none !important;
+    box-sizing: border-box !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* Color schemes for different elements */
+.interactive-highlight.type-button {
+    border-color: #2196F3 !important;  /* Blue for buttons */
+}
+
+.interactive-highlight.type-link {
+    border-color: #4CAF50 !important;  /* Green for links */
+}
+
+.interactive-highlight.type-input {
+    border-color: #9C27B0 !important;  /* Purple for inputs */
+}
+
+.interactive-highlight.type-select {
+    border-color: #FF9800 !important;  /* Orange for select elements */
+}
+
+.interactive-highlight.type-search {
+    border-color: #FF5722 !important;  /* Deep Orange for search inputs */
+}
+
+.interactive-highlight.type-menu {
+    border-color: #673AB7 !important;  /* Deep Purple for menu items */
+}
+
+.interactive-highlight.type-form {
+    border-color: #009688 !important;  /* Teal for form elements */
+}
+
+.interactive-highlight.type-product {
+    border-color: #E91E63 !important;  /* Pink for products */
+}
+
+.interactive-highlight.type-cart {
+    border-color: #FFC107 !important;  /* Amber for cart buttons */
+}
+
+.highlight-label {
+    position: absolute;
+    top: -24px;
+    left: 0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: system-ui, -apple-system, sans-serif;
+    white-space: nowrap;
+    pointer-events: auto;
+    cursor: help;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Matching label colors */
+.highlight-label.type-button {
+    background-color: #2196F3;
+    color: white;
+}
+
+.highlight-label.type-link {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.highlight-label.type-input {
+    background-color: #9C27B0;
+    color: white;
+}
+
+.highlight-label.type-select {
+    background-color: #FF9800;
+    color: white;
+}
+
+.highlight-label.type-search {
+    background-color: #FF5722;
+    color: white;
+}
+
+.highlight-label.type-menu {
+    background-color: #673AB7;
+    color: white;
+}
+
+.highlight-label.type-form {
+    background-color: #009688;
+    color: white;
+}
+
+.highlight-label.type-product {
+    background-color: #E91E63;
+    color: white;
+}
+
+.highlight-label.type-cart {
+    background-color: #FFC107;
+    color: black;
+}
+
+/* Enhanced hover effects */
+.highlight-label:hover {
+    z-index: 10000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Tooltip styling */
+.highlight-tooltip {
+    display: none;
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    max-width: 200px;
+    z-index: 10001;
+}
+
+.highlight-label:hover .highlight-tooltip {
+    display: block;
+} 

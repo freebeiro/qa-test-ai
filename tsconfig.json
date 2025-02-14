@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "sourceMap": true,
+    "outDir": "dist"
+  },
+  "include": ["**/*.js", "commands/**/*.js", "core/**/*.js"],
+  "exclude": ["node_modules"]
+}

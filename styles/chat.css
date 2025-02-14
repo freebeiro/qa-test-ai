@@ -1,0 +1,160 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.chat-container {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 8px;
+}
+
+.chat-history {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chat-entry {
+    background: #2d2d2d;
+    border-radius: 8px;
+    padding: 12px;
+    max-width: 100%;
+}
+
+.command-text {
+    font-family: 'Menlo', 'Monaco', monospace;
+    color: #61afef;
+    background: #353535;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    word-break: break-word;
+}
+
+.error-message {
+    color: #e06c75;
+    background: #3c2626;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.timestamp {
+    color: #888;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.screenshots-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.screenshot-wrapper {
+    width: 100%;
+    position: relative;
+}
+
+.screenshot-wrapper img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid #444;
+}
+
+.screenshot-caption {
+    color: #888;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.input-container {
+    display: flex;
+    gap: 8px;
+    background: #2d2d2d;
+    padding: 12px;
+    border-radius: 8px;
+    position: sticky;
+    bottom: 0;
+}
+
+#command-input {
+    flex: 1;
+    background: #353535;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    resize: none;
+    min-height: 36px;
+    max-height: 120px;
+}
+
+#command-input:focus {
+    outline: none;
+    border-color: #61afef;
+}
+
+#command-input::placeholder {
+    color: #888;
+}
+
+#send-button {
+    padding: 8px 16px;
+    background: #61afef;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#send-button:hover {
+    background: #528bbc;
+}
+
+#send-button:disabled {
+    background: #444;
+    cursor: not-allowed;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

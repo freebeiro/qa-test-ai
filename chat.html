@@ -2,13 +2,14 @@
 <html>
 <head>
     <title>QA Testing Assistant</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="styles/chat.css">
 </head>
 <body>
-    <div id="app">
-        <div id="chat-container">
-            <div id="screenshot" class="chat-history"></div>
+    <div id="app" class="app-container">
+        <div id="chat-container" class="chat-container">
+            <div id="chat-history" class="chat-history"></div>
         </div>
         <div class="input-container">
             <textarea 
@@ -19,7 +20,11 @@
             ></textarea>
             <button id="send-button" type="button">Send</button>
         </div>
+        <div class="test-controls">
+            <button id="run-tests" type="button">Run Tests</button>
+        </div>
     </div>
-    <script src="popup.bundle.js"></script>
+    <script src="chat.bundle.js"></script>
+    <script src="tests.bundle.js"></script>
 </body>
 </html>

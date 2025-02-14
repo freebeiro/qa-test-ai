@@ -8,18 +8,31 @@
     "activeTab",
     "tabs",
     "scripting",
-    "scripting.executeScript"
+    "tabCapture",
+    "system.display",
+    "storage"
   ],
   
   "host_permissions": [
     "<all_urls>"
   ],
   
+  "web_accessible_resources": [{
+    "resources": ["content-script.js"],
+    "matches": ["<all_urls>"]
+  }],
+  
   "action": {
-    "default_title": "QA Testing Assistant"
+    "default_title": "QA Testing Assistant",
+    "default_popup": "chat.html"
   },
 
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.bundle.js",
+    "type": "module"
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }
