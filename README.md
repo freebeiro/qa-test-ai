@@ -1,65 +1,84 @@
-# QA Testing Assistant with Vision-Language AI
+# QA Testing Assistant Chrome Extension
 
-The QA Testing Assistant is an innovative Chrome extension that revolutionizes web testing by combining natural language processing with advanced browser automation. It enables testers to conduct sophisticated testing through simple conversational commands.
+A Chrome extension designed to assist QA testers by automating common testing tasks and providing a simple command interface.
 
-## Latest Features
+## Latest Updates
 
-- **Enhanced Command Processing**: Improved pattern matching and error handling
-- **Smart Click Detection**: Multiple strategies for finding and clicking elements
-- **Smooth Scrolling**: Better scroll behavior with multiple directions
-- **Comprehensive Logging**: Emoji-based logging system for better debugging
-- **Improved Screenshot Capture**: Reliable screenshot functionality
-- **Better Error Handling**: Clear error messages and recovery
+- Improved tab management and screenshot reliability
+- Enhanced element finding and click functionality
+- Added support for UI-TARS integration
+- Implemented robust error handling
+- Added comprehensive technical documentation
+
+## Features
+
+- **Smart Navigation**: Automatically navigates to specified URLs with intelligent tab management
+- **Reliable Screenshots**: Captures high-quality screenshots from the correct tab
+- **Intelligent Click Detection**: Finds and clicks elements using a priority-based approach
+- **Error Recovery**: Comprehensive error handling with clear feedback
+- **UI-TARS Ready**: Prepared for integration with UI-TARS for advanced automation
 
 ## Key Commands
 
-The assistant supports various commands:
+1. **Navigation**:
+   ```
+   go to [URL]
+   ```
+   Navigates to the specified URL in a controlled tab
 
-- **Navigation**: 
-  - "go to example.com"
-  - "go back"
-  - "go forward"
-  - "refresh"
+2. **Click**:
+   ```
+   click [element text]
+   ```
+   Finds and clicks elements containing the specified text
 
-- **Search & Find**:
-  - "search for 'term'"
-  - "find 'text on page'"
-  - "find and click 'button text'"
-
-- **Scrolling**:
-  - "scroll up"
-  - "scroll down"
-  - "scroll top"
-  - "scroll bottom"
+3. **Screenshot**:
+   ```
+   screenshot
+   ```
+   Captures a screenshot of the current tab
 
 ## Technical Architecture
 
-The system consists of three main components:
+The extension follows SOLID principles and uses a modular architecture:
 
-1. **Chrome Extension Frontend**:
-   - Chat-like interface
-   - Command processing
-   - Screenshot capture
-   - Browser interaction
+- **Command Pattern**: Extensible command system for easy feature addition
+- **Factory Pattern**: Flexible command creation and validation
+- **Strategy Pattern**: Smart element finding with priority matching
+- **Observer Pattern**: Event-based state management
 
-2. **Command Processing System**:
-   - Pattern matching
-   - Command execution
-   - Error handling
-   - State management
-
-3. **Browser Integration**:
-   - Tab management
-   - Navigation control
-   - Element interaction
-   - Screenshot capture
+See [IMPLEMENTATION.md](IMPLEMENTATION.md) for detailed technical documentation.
 
 ## Prerequisites
 
-- Google Chrome Browser (latest version)
-- Developer mode enabled in Chrome
+- Chrome Browser (Latest Version)
+- Node.js and npm (for development)
+- UI-TARS (optional, for advanced automation)
 
 ## Installation
 
-1. Clone the repository:
-\`\`
+1. Clone the repository
+2. Run `npm install` to install dependencies
+3. Load the extension in Chrome:
+   - Open chrome://extensions/
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the extension directory
+
+## Development
+
+1. Make changes to the source code
+2. Run tests: `npm test`
+3. Build the extension: `npm run build`
+4. Reload the extension in Chrome
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License - See LICENSE file for details

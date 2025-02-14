@@ -189,7 +189,7 @@ class NavigationCommand extends Command {
         this.url = url;
         this.browserTab = browserTab;
         this.skipFirstResult = skipFirstResult;
-        console.log(`🌐 Creating NavigationCommand for: ${this.url} (skipFirstResult: ${skipFirstResult})`);
+        console.log(`🌐 Creating NavigationCommand for: ${this.url}`);
     }
 
     async execute() {
@@ -197,50 +197,21 @@ class NavigationCommand extends Command {
             const formattedUrl = this.formatUrl(this.url);
             
             if (formattedUrl && !this.skipFirstResult) {
-                console.log(`🌐 Attempting direct navigation to: ${formattedUrl}`);
+                console.log(`🌐 Navigating to: ${formattedUrl}`);
                 await this.browserTab.navigate(formattedUrl);
 
                 // Wait for page load
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
-                try {
-                    // Check if page loaded successfully
-                    const checkPageScript = () => {
-                        const errorTexts = [
-                            "This site can't be reached",
-                            "DNS_PROBE_POSSIBLE",
-                            "ERR_NAME_NOT_RESOLVED",
-                            "ERR_CONNECTION_REFUSED",
-                            "showing error page"
-                        ];
-                        
-                        const pageText = document.body.innerText;
-                        return errorTexts.some(error => pageText.includes(error));
-                    };
-
-                    const hasError = await this.browserTab.executeScript(checkPageScript);
-                    
-                    // If script execution failed or error detected, fall back to Google search
-                    if (hasError?.[0] || !hasError) {
-                        console.log('🔄 Page error detected, falling back to Google search');
-                        return await this.handleGoogleSearch();
-                    }
-
-                    // Take screenshot of successful navigation
-                    await this.browserTab.captureScreenshot();
-                    return true;
-
-                } catch (scriptError) {
-                    console.log('🔄 Script execution failed, falling back to Google search');
-                    return await this.handleGoogleSearch();
-                }
+                // Ensure we're on the right tab and take screenshot
+                await this.browserTab.captureScreenshot();
+                return true;
             }
 
-            // If no direct URL, do Google search
+            // Fall back to Google search
             return await this.handleGoogleSearch();
-
         } catch (error) {
-            console.error('❌ Navigation error:', error);
+            console.error('❌ Navigation failed:', error);
             throw error;
         }
     }
@@ -248,50 +219,35 @@ class NavigationCommand extends Command {
     async handleGoogleSearch() {
         console.log(`🔍 Searching Google for: ${this.url}`);
         const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(this.url)}`;
-        await this.browserTab.navigate(googleUrl);
         
-        // Wait for Google results and take screenshot
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        await this.browserTab.captureScreenshot();
+        await this.browserTab.navigate(googleUrl);
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         if (!this.skipFirstResult) {
-            // Click first result
             const clickFirstResult = () => {
-                const searchResults = document.querySelectorAll('#search .g a');
-                if (searchResults.length > 0) {
-                    const firstResult = searchResults[0];
-                    console.log('🎯 Clicking first result:', firstResult.href);
-                    firstResult.click();
-                    return firstResult.href;
+                const link = document.querySelector('#search .g a');
+                if (link) {
+                    link.click();
+                    return true;
                 }
                 return false;
             };
 
-            const result = await this.browserTab.executeScript(clickFirstResult);
-            if (!result?.[0]) {
-                throw new Error('Could not find search results');
-            }
-
-            // Wait for destination page and take screenshot
+            await this.browserTab.executeScript(clickFirstResult);
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await this.browserTab.captureScreenshot();
         }
 
+        await this.browserTab.captureScreenshot();
         return true;
     }
 
     formatUrl(url) {
-        // If it's already a full URL, return it
         if (url.startsWith('http://') || url.startsWith('https://')) {
             return url;
         }
-
-        // If it contains a dot, treat it as a domain
         if (url.includes('.')) {
             return `https://${url.startsWith('www.') ? '' : 'www.'}${url}`;
         }
-
-        // Otherwise, return null to indicate we should search
         return null;
     }
 }
@@ -299,11 +255,11 @@ class NavigationCommand extends Command {
 // Command factory
 class CommandFactory {
     static createCommand(type, params, browserTab) {
-        switch(type) {
+        console.log(`🏭 Creating command of type: ${type} with params:`, params);
+        
+        switch (type) {
             case 'navigation':
                 return new NavigationCommand(params.url, browserTab, params.skipFirstResult);
-            case 'search':
-                return new SearchCommand(params.query, browserTab);
             case 'back':
                 return new BackCommand(browserTab);
             case 'forward':
@@ -312,12 +268,27 @@ class CommandFactory {
                 return new RefreshCommand(browserTab);
             case 'scroll':
                 return new ScrollCommand(params.direction, browserTab);
+            case 'search':
+                return new SearchCommand(params.query, browserTab);
             case 'find':
                 return new FindCommand(params.text, browserTab);
             case 'findAndClick':
-                return new FindAndClickCommand(params.text, browserTab);
+            case 'click':
+                // Handle both click and findAndClick with the same command
+                const textToFind = params.text || params.target;
+                if (!textToFind) {
+                    throw new Error('No text specified for click command');
+                }
+                return new FindAndClickCommand(textToFind, browserTab);
+            case 'smartClick':
+                return new SmartFindAndClickCommand({
+                    index: params.index,
+                    text: params.text
+                }, browserTab);
+            case 'smartFind':
+                return new SmartFindAndClickCommand(params.options, browserTab);
             default:
-                return null;
+                throw new Error(`Unknown command type: ${type}`);
         }
     }
 }
@@ -326,6 +297,7 @@ class CommandFactory {
 class BrowserTabManager {
     constructor() {
         this.tabId = null;
+        this.windowId = null;
         this.port = null;
         this.initializeConnection();
         console.log('🔧 Initializing BrowserTabManager');
@@ -334,31 +306,72 @@ class BrowserTabManager {
     initializeConnection() {
         this.port = chrome.runtime.connect({ name: "qa-window" });
         
-        this.port.onMessage.addListener((message) => {
+        this.port.onMessage.addListener(async (message) => {
             if (message.type === 'INIT_STATE') {
                 this.tabId = message.browserTabId;
-                console.log(`🔧 Initialized with browser tab ID: ${this.tabId}`);
+                try {
+                    const tab = await chrome.tabs.get(this.tabId);
+                    this.windowId = tab.windowId;
+                    console.log(`🔧 Initialized with browser tab ID: ${this.tabId} in window: ${this.windowId}`);
+                } catch (error) {
+                    console.error('Failed to get window ID:', error);
+                }
             }
         });
     }
 
-    async navigate(url) {
-        if (!this.tabId) {
-            throw new Error('Browser tab ID not initialized');
+    async ensureTabActive() {
+        if (!this.tabId || !this.windowId) {
+            throw new Error('Browser tab or window ID not initialized');
         }
+
+        // First focus the window
+        await chrome.windows.update(this.windowId, { focused: true });
+        
+        // Then activate the tab and wait for it
+        await chrome.tabs.update(this.tabId, { active: true });
+        
+        // Wait for tab to be fully active
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Double check tab is active
+        const tab = await chrome.tabs.get(this.tabId);
+        if (!tab.active) {
+            await chrome.tabs.update(this.tabId, { active: true });
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+
+    async navigate(url) {
+        await this.ensureTabActive();
         return await chrome.tabs.update(this.tabId, { url });
     }
 
     async captureScreenshot() {
-        const tab = await chrome.tabs.get(this.tabId);
-        return await chrome.tabs.captureVisibleTab(tab.windowId, {
-            format: 'png',
-            quality: 100
-        });
+        await this.ensureTabActive();
+        
+        try {
+            // Capture screenshot specifically of our tab
+            const result = await chrome.tabs.captureVisibleTab(this.windowId, {
+                format: 'png',
+                quality: 100
+            });
+            
+            // Verify screenshot was taken
+            if (!result) {
+                throw new Error('Screenshot capture returned empty result');
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('❌ Screenshot capture failed:', error);
+            throw error;
+        }
     }
 
     async executeScript(func, args) {
-        console.log(`🔧 Executing script with args:`, args);
+        await this.ensureTabActive();
+        
         try {
             const result = await chrome.scripting.executeScript({
                 target: { tabId: this.tabId },
@@ -847,97 +860,103 @@ class FindAndClickCommand extends Command {
         super();
         this.text = text;
         this.browserTab = browserTab;
-        console.log(`🔍 Creating FindAndClickCommand for text: "${text}"`);
+        console.log(`🔍 Creating FindAndClickCommand for text: "${this.text}"`);
     }
 
     async execute() {
         console.log(`🔍 Executing FindAndClickCommand for: "${this.text}"`);
         const findAndClickScript = (searchText) => {
-            console.log(`🔍 Running find and click script for: "${searchText}"`);
-            
-            // Helper function to check if element is visible and clickable
-            const isVisible = (element) => {
+            // Helper function to check if element is visible
+            function isVisible(element) {
                 const rect = element.getBoundingClientRect();
                 const style = window.getComputedStyle(element);
-                return style.display !== 'none' && 
-                       style.visibility !== 'hidden' && 
+                return style.display !== 'none' &&
+                       style.visibility !== 'hidden' &&
                        style.opacity !== '0' &&
                        rect.width > 0 &&
                        rect.height > 0 &&
-                       rect.top < window.innerHeight &&
-                       rect.left < window.innerWidth;
-            };
+                       rect.top >= 0 &&
+                       rect.left >= 0;
+            }
 
-            // Helper function to get element text content
-            const getElementText = (element) => {
-                return (element.textContent || element.value || '').trim().toLowerCase();
-            };
+            // Helper function to get all text content
+            function getElementText(element) {
+                return [
+                    element.textContent,
+                    element.value,
+                    element.placeholder,
+                    element.ariaLabel,
+                    element.title,
+                    element.getAttribute('aria-label'),
+                    element.getAttribute('data-text'),
+                    element.getAttribute('alt')
+                ].filter(Boolean).join(' ').toLowerCase().trim();
+            }
 
-            // Helper function to simulate a more natural click
-            const simulateClick = (element) => {
-                // Try multiple click methods
+            // Try to find the element
+            const searchTextLower = searchText.toLowerCase().trim();
+            const elements = Array.from(document.querySelectorAll('*'));
+            
+            // First try exact match on buttons/links
+            let element = elements.find(el => 
+                (el.tagName === 'BUTTON' || el.tagName === 'A') &&
+                isVisible(el) &&
+                getElementText(el) === searchTextLower
+            );
+
+            // Then try contains on buttons/links
+            if (!element) {
+                element = elements.find(el => 
+                    (el.tagName === 'BUTTON' || el.tagName === 'A') &&
+                    isVisible(el) &&
+                    getElementText(el).includes(searchTextLower)
+                );
+            }
+
+            // Finally try any element
+            if (!element) {
+                element = elements.find(el => 
+                    isVisible(el) &&
+                    getElementText(el).includes(searchTextLower)
+                );
+            }
+
+            if (!element) {
+                throw new Error(`Could not find element with text: "${searchText}"`);
+            }
+
+            // Click the element
+            try {
+                element.click();
+                return { success: true, message: 'Element clicked successfully' };
+            } catch (error) {
+                console.error('Direct click failed, trying event dispatch');
                 try {
-                    // First try the click() method
-                    element.click();
-                    
-                    // If that didn't work, try dispatching events
-                    const clickEvent = new MouseEvent('click', {
+                    element.dispatchEvent(new MouseEvent('click', {
                         view: window,
                         bubbles: true,
                         cancelable: true
-                    });
-                    element.dispatchEvent(clickEvent);
-                    
-                    return true;
-                } catch (error) {
-                    console.error('Click simulation failed:', error);
-                    return false;
+                    }));
+                    return { success: true, message: 'Element clicked via event dispatch' };
+                } catch (error2) {
+                    throw new Error(`Failed to click element: ${error2.message}`);
                 }
-            };
-
-            // First try exact matches on interactive elements
-            const interactiveElements = [...document.querySelectorAll('button, a, input[type="submit"], input[type="button"], [role="button"], [onclick], [class*="button"], [class*="btn"]')]
-                .filter(el => isVisible(el) && 
-                    getElementText(el) === searchText.toLowerCase());
-
-            if (interactiveElements.length > 0) {
-                console.log('✅ Found exact match:', interactiveElements[0]);
-                return simulateClick(interactiveElements[0]);
             }
-
-            // Then try contains on interactive elements
-            const containsElements = [...document.querySelectorAll('button, a, input[type="submit"], input[type="button"], [role="button"], [onclick], [class*="button"], [class*="btn"]')]
-                .filter(el => isVisible(el) && 
-                    getElementText(el).includes(searchText.toLowerCase()));
-
-            if (containsElements.length > 0) {
-                console.log('✅ Found partial match:', containsElements[0]);
-                return simulateClick(containsElements[0]);
-            }
-
-            // Finally, try any element with matching text
-            const allElements = [...document.querySelectorAll('*')]
-                .filter(el => isVisible(el) && 
-                    getElementText(el).includes(searchText.toLowerCase()));
-
-            if (allElements.length > 0) {
-                console.log('✅ Found element by text:', allElements[0]);
-                return simulateClick(allElements[0]);
-            }
-
-            console.log('❌ No matching clickable elements found');
-            return false;
         };
 
         try {
+            // Wait for page to be stable
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
             const result = await this.browserTab.executeScript(findAndClickScript, [this.text]);
             console.log('FindAndClick result:', result);
-            if (!result?.[0]?.result) {
-                throw new Error(`Could not find or click element with text: "${this.text}"`);
-            }
+            
+            // Wait after clicking
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
             return result;
         } catch (error) {
-            console.error('❌ FindAndClick error:', error);
+            console.log('❌ FindAndClick error:', error);
             throw error;
         }
     }
