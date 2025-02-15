@@ -299,7 +299,9 @@ class NavigationCommand extends Command {
 // Command factory
 class CommandFactory {
     static createCommand(type, params, browserTab) {
-        switch(type) {
+        console.log(`🏭 Creating command of type: ${type} with params:`, params);
+        
+        switch (type) {
             case 'navigation':
                 return new NavigationCommand(params.url, browserTab, params.skipFirstResult);
             case 'search':
@@ -317,7 +319,7 @@ class CommandFactory {
             case 'findAndClick':
                 return new FindAndClickCommand(params.text, browserTab);
             default:
-                return null;
+                throw new Error(`Unknown command type: ${type}`);
         }
     }
 }
@@ -326,6 +328,7 @@ class CommandFactory {
 class BrowserTabManager {
     constructor() {
         this.tabId = null;
+        this.windowId = null;
         this.port = null;
         this.initializeConnection();
         console.log('🔧 Initializing BrowserTabManager');
@@ -334,39 +337,56 @@ class BrowserTabManager {
     initializeConnection() {
         this.port = chrome.runtime.connect({ name: "qa-window" });
         
-        this.port.onMessage.addListener((message) => {
+        this.port.onMessage.addListener(async (message) => {
             if (message.type === 'INIT_STATE') {
                 this.tabId = message.browserTabId;
-                console.log(`🔧 Initialized with browser tab ID: ${this.tabId}`);
+                try {
+                    const tab = await chrome.tabs.get(this.tabId);
+                    this.windowId = tab.windowId;
+                    console.log(`🔧 Initialized with browser tab ID: ${this.tabId}`);
+                } catch (error) {
+                    console.error('Failed to get window ID:', error);
+                }
             }
         });
     }
 
     async navigate(url) {
-        if (!this.tabId) {
-            throw new Error('Browser tab ID not initialized');
-        }
+        await this.ensureTabActive();
         return await chrome.tabs.update(this.tabId, { url });
     }
 
-    async captureScreenshot() {
-        const tab = await chrome.tabs.get(this.tabId);
-        return await chrome.tabs.captureVisibleTab(tab.windowId, {
-            format: 'png',
-            quality: 100
-        });
+    async ensureTabActive() {
+        if (!this.tabId || !this.windowId) {
+            throw new Error('Browser tab not initialized');
+        }
+        await chrome.windows.update(this.windowId, { focused: true });
+        await chrome.tabs.update(this.tabId, { active: true });
+        await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    async executeScript(func, args) {
-        console.log(`🔧 Executing script with args:`, args);
+    async captureScreenshot() {
+        await this.ensureTabActive();
         try {
-            const result = await chrome.scripting.executeScript({
+            const result = await chrome.tabs.captureVisibleTab(this.windowId, {
+                format: 'png',
+                quality: 100
+            });
+            return result;
+        } catch (error) {
+            console.error('❌ Screenshot capture failed:', error);
+            throw error;
+        }
+    }
+
+    async executeScript(func, args = []) {
+        await this.ensureTabActive();
+        try {
+            return await chrome.scripting.executeScript({
                 target: { tabId: this.tabId },
                 function: func,
                 args: args
             });
-            console.log('✅ Script execution result:', result);
-            return result;
         } catch (error) {
             console.error('❌ Script execution failed:', error);
             throw error;
