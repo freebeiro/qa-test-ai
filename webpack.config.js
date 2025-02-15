@@ -2,6 +2,7 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
+  mode: 'production',
   entry: {
     popup: './popup.js',
     background: './background.js'
@@ -9,6 +10,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].bundle.js',
+    clean: true
   },
   module: {
     rules: [
@@ -18,7 +20,13 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env']
+            presets: [
+              ['@babel/preset-env', {
+                targets: {
+                  chrome: "88"
+                }
+              }]
+            ]
           }
         }
       }
@@ -35,4 +43,11 @@ module.exports = {
       ],
     }),
   ],
+  resolve: {
+    extensions: ['.js'],
+    fallback: {}
+  },
+  optimization: {
+    minimize: false
+  }
 }; 

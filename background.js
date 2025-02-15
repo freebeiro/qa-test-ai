@@ -10,22 +10,55 @@ function cleanup() {
     activePort = null;
 }
 
-chrome.action.onClicked.addListener(async (tab) => {
-    // Store the current tab ID
-    browserTabId = tab.id;
-    
-    // If window exists, focus it instead of creating new one
-    if (qaWindow) {
-        try {
-            await chrome.windows.update(qaWindow.id, { focused: true });
+// Ensure storage is available
+function checkStorage() {
+    return new Promise((resolve, reject) => {
+        if (!chrome.storage || !chrome.storage.local) {
+            reject(new Error('Storage API not available'));
             return;
-        } catch (error) {
-            // Window probably doesn't exist anymore
-            cleanup();
         }
-    }
-    
+        resolve();
+    });
+}
+
+// Save state to storage
+async function saveState(data) {
     try {
+        await checkStorage();
+        return await chrome.storage.local.set(data);
+    } catch (error) {
+        console.error('Failed to save state:', error);
+        throw error;
+    }
+}
+
+// Load state from storage
+async function loadState(keys) {
+    try {
+        await checkStorage();
+        return await chrome.storage.local.get(keys);
+    } catch (error) {
+        console.error('Failed to load state:', error);
+        throw error;
+    }
+}
+
+chrome.action.onClicked.addListener(async (tab) => {
+    try {
+        // Store the current tab ID
+        browserTabId = tab?.id;
+        
+        // If window exists, focus it instead of creating new one
+        if (qaWindow) {
+            try {
+                await chrome.windows.update(qaWindow.id, { focused: true });
+                return;
+            } catch (error) {
+                console.error('Failed to focus window:', error);
+                cleanup();
+            }
+        }
+        
         // Create window with better dimensions
         qaWindow = await chrome.windows.create({
             url: 'popup.html',
@@ -37,10 +70,12 @@ chrome.action.onClicked.addListener(async (tab) => {
         });
 
         // Store window info
-        chrome.storage.local.set({ 
-            qaWindowId: qaWindow.id,
-            browserTabId: browserTabId
-        });
+        if (qaWindow?.id && browserTabId) {
+            await saveState({ 
+                qaWindowId: qaWindow.id,
+                browserTabId: browserTabId
+            });
+        }
 
     } catch (error) {
         console.error('Failed to create window:', error);
@@ -61,11 +96,17 @@ chrome.runtime.onConnect.addListener(function(port) {
         activePort = port;
         
         // Send initial state
-        chrome.storage.local.get(['browserTabId'], function(result) {
+        loadState(['browserTabId']).then(result => {
             browserTabId = result.browserTabId;
             port.postMessage({
                 type: 'INIT_STATE',
                 browserTabId: browserTabId
+            });
+        }).catch(error => {
+            console.error('Failed to load state:', error);
+            port.postMessage({
+                type: 'INIT_STATE',
+                error: error.message
             });
         });
 
@@ -82,7 +123,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         activePort.postMessage({
             type: 'TAB_UPDATED',
             status: changeInfo.status,
-            url: tab.url
+            url: tab?.url
         });
     }
 });

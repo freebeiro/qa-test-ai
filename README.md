@@ -1,65 +1,86 @@
-# QA Testing Assistant with Vision-Language AI
+# QA Testing Assistant Chrome Extension
 
-The QA Testing Assistant is an innovative Chrome extension that revolutionizes web testing by combining natural language processing with advanced browser automation. It enables testers to conduct sophisticated testing through simple conversational commands.
-
-## Latest Features
-
-- **Enhanced Command Processing**: Improved pattern matching and error handling
-- **Smart Click Detection**: Multiple strategies for finding and clicking elements
-- **Smooth Scrolling**: Better scroll behavior with multiple directions
-- **Comprehensive Logging**: Emoji-based logging system for better debugging
-- **Improved Screenshot Capture**: Reliable screenshot functionality
-- **Better Error Handling**: Clear error messages and recovery
-
-## Key Commands
-
-The assistant supports various commands:
-
-- **Navigation**: 
-  - "go to example.com"
-  - "go back"
-  - "go forward"
-  - "refresh"
-
-- **Search & Find**:
-  - "search for 'term'"
-  - "find 'text on page'"
-  - "find and click 'button text'"
-
-- **Scrolling**:
-  - "scroll up"
-  - "scroll down"
-  - "scroll top"
-  - "scroll bottom"
-
-## Technical Architecture
-
-The system consists of three main components:
-
-1. **Chrome Extension Frontend**:
-   - Chat-like interface
-   - Command processing
-   - Screenshot capture
-   - Browser interaction
-
-2. **Command Processing System**:
-   - Pattern matching
-   - Command execution
-   - Error handling
-   - State management
-
-3. **Browser Integration**:
-   - Tab management
-   - Navigation control
-   - Element interaction
-   - Screenshot capture
+A Chrome extension that helps with QA testing by providing automated testing capabilities and visual analysis.
 
 ## Prerequisites
 
-- Google Chrome Browser (latest version)
-- Developer mode enabled in Chrome
+- Node.js (v14 or higher)
+- npm (comes with Node.js)
+- Google Chrome browser
+- Git
 
-## Installation
+## Setup Instructions
 
-1. Clone the repository:
-\`\`
+1. **Clone the Repository**
+   ```bash
+   git clone <repository-url>
+   cd qa-testing-assistant
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Build the Extension**
+   ```bash
+   npm run build
+   ```
+   This will create a `dist` folder with the built extension.
+
+4. **Load the Extension in Chrome**
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" in the top right corner
+   - Click "Load unpacked"
+   - Select the `dist` folder from the project directory
+
+## Development
+
+- For development with hot-reload:
+  ```bash
+  npm run dev
+  ```
+
+- To build for production:
+  ```bash
+  npm run build
+  ```
+
+## Usage
+
+1. Click the extension icon in Chrome's toolbar
+2. A popup window will appear with the QA Testing interface
+3. Enter commands in the input field to control the browser:
+   - Navigate to URLs: `go to example.com`
+   - Search: `search for something`
+   - Click elements: `click Login button`
+   - And more...
+
+## Features
+
+- Browser automation
+- Visual element analysis
+- Command-based interface
+- Screenshot capture
+- Automated testing capabilities
+
+## Troubleshooting
+
+If you encounter any issues:
+
+1. Make sure all dependencies are installed
+2. Check that you're using the correct Node.js version
+3. Try removing the extension from Chrome and loading it again
+4. Clear Chrome's cache and restart the browser
+5. Rebuild the extension using `npm run build`
+
+## Development Notes
+
+- The extension uses Manifest V3
+- Webpack is used for bundling
+- Babel is used for transpiling
+- Chrome APIs are used for browser interaction
+
+## License
+
+[Add your license information here]
