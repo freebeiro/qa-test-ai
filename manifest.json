@@ -7,8 +7,7 @@
   "permissions": [
     "activeTab",
     "tabs",
-    "scripting",
-    "scripting.executeScript"
+    "scripting"
   ],
   
   "host_permissions": [
@@ -16,10 +15,26 @@
   ],
   
   "action": {
-    "default_title": "QA Testing Assistant"
+    "default_title": "QA Testing Assistant",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
 
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.bundle.js",
+    "type": "module"
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:11434"
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }
