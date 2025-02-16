@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "QA Testing Assistant with Vision-Language AI",
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "webpack --mode development",
     "dev": "webpack --mode development --watch",
     "test": "jest"
   },

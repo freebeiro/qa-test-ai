@@ -5,13 +5,13 @@
   "description": "Assistant for QA testing",
   
   "permissions": [
-    "activeTab",
     "tabs",
     "scripting",
     "storage"
   ],
-  
+
   "host_permissions": [
+    "http://localhost:11434/*",
     "<all_urls>"
   ],
   
@@ -29,7 +29,7 @@
   },
 
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:11434"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src * http://localhost:11434 ws://localhost:11434"
   },
 
   "icons": {

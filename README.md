@@ -1,86 +1,84 @@
-# QA Testing Assistant Chrome Extension
+# QA Testing Assistant
 
-A Chrome extension that helps with QA testing by providing automated testing capabilities and visual analysis.
+Chrome extension for automated testing with vision model integration.
 
-## Prerequisites
+## Requirements
 
-- Node.js (v14 or higher)
-- npm (comes with Node.js)
-- Google Chrome browser
-- Git
+- Node.js 14+
+- Chrome browser
+- Ollama with llama3.2-vision model
 
-## Setup Instructions
+## Setup
 
-1. **Clone the Repository**
-   ```bash
-   git clone <repository-url>
-   cd qa-testing-assistant
-   ```
+1. **Install Dependencies**
+```bash
+npm install
+```
 
-2. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+2. **Build Extension**
+```bash
+npm run build
+```
 
-3. **Build the Extension**
-   ```bash
-   npm run build
-   ```
-   This will create a `dist` folder with the built extension.
+3. **Load in Chrome**
+- Open chrome://extensions/
+- Enable Developer mode
+- Load unpacked -> select dist folder
 
-4. **Load the Extension in Chrome**
-   - Open Chrome and navigate to `chrome://extensions/`
-   - Enable "Developer mode" in the top right corner
-   - Click "Load unpacked"
-   - Select the `dist` folder from the project directory
-
-## Development
-
-- For development with hot-reload:
-  ```bash
-  npm run dev
-  ```
-
-- To build for production:
-  ```bash
-  npm run build
-  ```
+4. **Configure Ollama**
+- Ensure Ollama is running
+- Verify llama3.2-vision model is available
+- Check localhost:11434 access
 
 ## Usage
 
-1. Click the extension icon in Chrome's toolbar
-2. A popup window will appear with the QA Testing interface
-3. Enter commands in the input field to control the browser:
-   - Navigate to URLs: `go to example.com`
-   - Search: `search for something`
-   - Click elements: `click Login button`
-   - And more...
+### Basic Commands
+- `go to [url]` - Navigate to website
+- `click [element]` - Click on element
+- `search [term]` - Search on page
+- `test vision` - Analyze current page
 
-## Features
+### Vision Features
+- Element detection
+- Layout analysis
+- Interactive elements
+- Visual hierarchy
 
-- Browser automation
-- Visual element analysis
-- Command-based interface
-- Screenshot capture
-- Automated testing capabilities
+## Development
+
+### Build Commands
+```bash
+# Development
+npm run dev
+
+# Production
+npm run build
+```
+
+### Project Structure
+```
+project/
+├── manifest.json      # Extension config
+├── popup.html        # UI template
+├── popup.js          # Core logic
+├── vision_service.js # Vision integration
+└── background.js     # Background service
+```
 
 ## Troubleshooting
 
-If you encounter any issues:
+1. Check Ollama service status
+2. Verify model availability
+3. Check browser console
+4. Review error logs
 
-1. Make sure all dependencies are installed
-2. Check that you're using the correct Node.js version
-3. Try removing the extension from Chrome and loading it again
-4. Clear Chrome's cache and restart the browser
-5. Rebuild the extension using `npm run build`
+## Contributing
 
-## Development Notes
-
-- The extension uses Manifest V3
-- Webpack is used for bundling
-- Babel is used for transpiling
-- Chrome APIs are used for browser interaction
+1. Fork repository
+2. Create feature branch
+3. Submit pull request
+4. Follow code standards
 
 ## License
 
-[Add your license information here]
+[Add License]

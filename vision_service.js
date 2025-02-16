@@ -6,15 +6,19 @@ export class VisionService {
 
     async analyzeScreenshot(screenshotBase64) {
         try {
+            // Remove data URL prefix if present and ensure proper base64 encoding
+            const base64Data = screenshotBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+            
             const response = await fetch(this.ollamaEndpoint, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     model: this.model,
-                    prompt: "You are a computer vision expert analyzing a webpage. Please identify and describe:\n1. All clickable elements (buttons, links)\n2. Input fields and forms\n3. Main content areas\n4. Navigation elements\n5. The layout structure\nBe specific about locations and provide a structured analysis.",
-                    images: [screenshotBase64]
+                    stream: false,
+                    prompt: "Analyze this webpage screenshot. Identify and describe: 1) Clickable elements 2) Input fields 3) Navigation elements 4) Main content areas 5) Layout structure. Focus on interactive elements and their locations.",
+                    images: [base64Data]
                 })
             });
 
