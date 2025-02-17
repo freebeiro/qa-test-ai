@@ -91,50 +91,82 @@ export class VisionService {
         return suggestions;
     }
 
-    async findElementByText(page, text) {
-        const elements = await page.$$('button, a, input, [role="button"]');
-        
-        for (const element of elements) {
-            const textContent = await element.textContent();
-            if (textContent?.toLowerCase().includes(text.toLowerCase())) {
-                return element;
+    async findElementByIntent(screenshotBase64, intent) {
+        try {
+            // Ask the vision model to specifically look for elements matching our intent
+            const response = await fetch(this.ollamaEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: this.model,
+                    stream: false,
+                    prompt: `Find the best element matching this user intention: "${intent}"
+                            Consider:
+                            1. Element text and purpose
+                            2. Visual appearance and location
+                            3. Common patterns for this type of element
+                            4. Context and surrounding elements
+                            
+                            Describe the best matching element in detail, including:
+                            1. Exact location (top, bottom, left, right, center)
+                            2. Visual characteristics
+                            3. Confidence level (0-100)
+                            4. Why this is the best match
+                            
+                            Format response as JSON with these fields:
+                            {"location", "description", "confidence", "reasoning"}
+                            `,
+                    images: [screenshotBase64]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Vision API request failed: ${response.statusText}`);
             }
+
+            const data = await response.json();
+            return this.parseElementMatch(data);
+        } catch (error) {
+            console.error('Element finding failed:', error);
+            throw error;
         }
-        
-        return null;
     }
 
-    async findElementByVisualLocation(page, description) {
-        // Implement visual location search using Playwright
-        const screenshot = await page.screenshot({ path: 'temp_screenshot.png' });
-        const analysis = await this.analyzeScreenshot(screenshot.toString('base64'));
-        
-        // Use the analysis to find elements matching the description
-        const elements = await page.$$('*');
-        for (const element of elements) {
-            const box = await element.boundingBox();
-            if (box) {
-                // Match the element's position with the description
-                const matches = this.matchElementPosition(box, description, analysis);
-                if (matches) return element;
+    parseElementMatch(response) {
+        try {
+            // Extract the JSON object from the model's text response
+            const jsonMatch = response.response.match(/\{[^}]+\}/);            
+            if (jsonMatch) {
+                const elementInfo = JSON.parse(jsonMatch[0]);
+                return {
+                    location: this.parseLocation(elementInfo.location),
+                    description: elementInfo.description,
+                    confidence: parseInt(elementInfo.confidence) / 100,
+                    reasoning: elementInfo.reasoning
+                };
             }
+            return null;
+        } catch (error) {
+            console.error('Failed to parse element match:', error);
+            return null;
         }
-        
-        return null;
     }
 
-    matchElementPosition(box, description, analysis) {
-        // Simple position matching logic
-        const pos = description.toLowerCase();
-        const centerX = box.x + box.width / 2;
-        const centerY = box.y + box.height / 2;
-        
-        if (pos.includes('top') && centerY < 200) return true;
-        if (pos.includes('bottom') && centerY > 400) return true;
-        if (pos.includes('left') && centerX < 200) return true;
-        if (pos.includes('right') && centerX > 400) return true;
-        if (pos.includes('center') && centerX > 200 && centerX < 400 && centerY > 200 && centerY < 400) return true;
-        
-        return false;
+    parseLocation(locationText) {
+        // Convert textual location to coordinates
+        const coords = {
+            x: 0.5,  // Default to center
+            y: 0.5
+        };
+
+        // Adjust coordinates based on location description
+        if (locationText.includes('top')) coords.y = 0.2;
+        if (locationText.includes('bottom')) coords.y = 0.8;
+        if (locationText.includes('left')) coords.x = 0.2;
+        if (locationText.includes('right')) coords.x = 0.8;
+
+        return coords;
     }
 } 

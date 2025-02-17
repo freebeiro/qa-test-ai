@@ -1,3 +1,9 @@
 #!/bin/bash
+
+# Clean dist directory
+rm -rf dist/*
+
+# Run webpack build
 npm run build
-echo "Extension rebuilt. Please refresh the extension in Chrome."
+
+echo "Rebuilding extension... Please reload the extension in Chrome after this completes."

@@ -2,7 +2,7 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  mode: 'production',
+  mode: 'development',  // Changed to development for better debugging
   entry: {
     popup: './popup.js',
     background: './background.js'
@@ -50,5 +50,5 @@ module.exports = {
   optimization: {
     minimize: false
   },
-  devtool: false
-}; 
+  devtool: 'source-map'  // Added for better debugging
+};
