@@ -398,3 +398,101 @@ When the extension opens in a new tab instead of a proper window, this is usuall
    - Set `type: 'popup'` for proper window behavior
    - Specify dimensions and position for better UX
    - Handle window focus and cleanup properly 
+
+## Cursor Implementation Details
+
+### How the Cursor Works
+The cursor (red dot) implementation uses several key techniques to ensure reliable visibility and smooth movement:
+
+1. **Direct DOM Injection**
+   ```javascript
+   const cursor = document.createElement('div');
+   cursor.id = 'qa-mouse-cursor';
+   document.body.appendChild(cursor);
+   ```
+
+2. **Critical CSS Properties**
+   ```css
+   #qa-mouse-cursor {
+       position: fixed !important;
+       z-index: 2147483647 !important;
+       pointer-events: none !important;
+       transform: translate(-50%, -50%) !important;
+       transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+   }
+   ```
+
+3. **Visibility Enforcement**
+   - Using `!important` flags to prevent style overrides
+   - Setting explicit `display: block` and `visibility: visible`
+   - Using maximum z-index to stay on top
+   - Implementing periodic visibility checks
+
+4. **Movement Animation**
+   - CSS transitions for smooth movement
+   - RequestAnimationFrame for performance
+   - Transform translate for accurate positioning
+   - Cubic bezier timing for natural feel
+
+### Common Cursor Issues
+
+1. **Cursor Disappearing**
+   - Cause: DOM updates or navigation
+   - Solution: Periodic visibility check and recreation
+   ```javascript
+   setInterval(() => {
+       const cursor = document.getElementById('qa-mouse-cursor');
+       if (!cursor || !cursor.isConnected) {
+           injectCursor(tabId);
+       }
+   }, 500);
+   ```
+
+2. **Z-Index Problems**
+   - Cause: Other elements with high z-index
+   - Solution: Using maximum safe z-index (2147483647)
+   ```css
+   z-index: 2147483647 !important;
+   ```
+
+3. **Movement Glitches**
+   - Cause: CSS transition conflicts
+   - Solution: Using transform and fixed positioning
+   ```css
+   position: fixed !important;
+   transform: translate(-50%, -50%) !important;
+   ```
+
+4. **Style Overrides**
+   - Cause: Page CSS affecting cursor
+   - Solution: Using !important and specific selectors
+   ```css
+   #qa-mouse-cursor {
+       /* All properties with !important */
+       display: block !important;
+       visibility: visible !important;
+       opacity: 1 !important;
+   }
+   ```
+
+### Best Practices
+
+1. **Injection Timing**
+   - Inject cursor after DOM is ready
+   - Reinject on navigation completion
+   - Check visibility periodically
+
+2. **Style Management**
+   - Use specific ID selectors
+   - Apply !important to all properties
+   - Set explicit values for all dimensions
+
+3. **Performance**
+   - Use RequestAnimationFrame for animations
+   - Minimize DOM operations
+   - Clean up on tab deactivation
+
+4. **Error Recovery**
+   - Implement visibility checks
+   - Handle navigation events
+   - Clean up old cursors before creating new ones

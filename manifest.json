@@ -12,8 +12,8 @@
   ],
 
   "host_permissions": [
-    "http://localhost:11434/*",
-    "http://localhost:9222/*",
+    "http://*/*",
+    "https://*/*",
     "<all_urls>"
   ],
   
@@ -30,7 +30,9 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.bundle.js"],
-      "run_at": "document_end"
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
     }
   ],
 

@@ -1,12 +1,37 @@
 # QA Testing Assistant
 
-Chrome extension for automated testing with vision model integration.
+Chrome extension for automated testing with mouse control and navigation capabilities.
+
+## Features
+
+### Mouse Control
+- Visual cursor representation
+- Coordinate-based movement
+- Smooth transitions
+- Persistence across navigation
+
+### Navigation
+- URL navigation with cursor persistence
+- Browser back/forward
+- Page refresh
+- Internal URL protection
+
+### Command System
+```
+# Mouse Commands
+move mouse to coordinates X Y    # Move cursor to specific pixel coordinates
+
+# Navigation Commands
+go to [url]                     # Navigate to specified URL
+back                            # Go back one page
+forward                         # Go forward one page
+refresh                         # Refresh current page
+```
 
 ## Requirements
 
+- Chrome/Brave browser
 - Node.js 14+
-- Chrome browser
-- Ollama with llama3.2-vision model
 
 ## Setup
 
@@ -20,29 +45,10 @@ npm install
 npm run build
 ```
 
-3. **Load in Chrome**
+3. **Load in Chrome/Brave**
 - Open chrome://extensions/
 - Enable Developer mode
 - Load unpacked -> select dist folder
-
-4. **Configure Ollama**
-- Ensure Ollama is running
-- Verify llama3.2-vision model is available
-- Check localhost:11434 access
-
-## Usage
-
-### Basic Commands
-- `go to [url]` - Navigate to website
-- `click [element]` - Click on element
-- `search [term]` - Search on page
-- `test vision` - Analyze current page
-
-### Vision Features
-- Element detection
-- Layout analysis
-- Interactive elements
-- Visual hierarchy
 
 ## Development
 
@@ -64,26 +70,36 @@ project/
 ├── popup.js          # UI logic and interactions
 ├── content.js       # Webpage interaction script
 ├── browser_manager.js # Browser control service
-├── vision_service.js  # Vision model integration
-├── command_processor.js # Command execution engine
-├── commands.js        # Basic commands
-├── smart_commands.js  # AI commands
-├── vision_commands.js # Vision commands
 └── docs/             # Project documentation
     ├── README.md
     ├── IMPLEMENTATION.md
     ├── TROUBLESHOOTING.md
-    ├── CHANGELOG.md
-    ├── PROJECT_STRUCTURE.md
-    └── PROJECT_KNOWLEDGE.md
+    └── CHANGELOG.md
 ```
+
+## Usage
+
+1. Click extension icon to activate
+2. Enter commands in the popup window
+3. Watch cursor move and execute commands
+4. Close popup to deactivate control
 
 ## Troubleshooting
 
-1. Check Ollama service status
-2. Verify model availability
-3. Check browser console
-4. Review error logs
+1. **Cursor not visible**
+   - Reload extension
+   - Check console for errors
+   - Verify page is not internal URL
+
+2. **Movement not working**
+   - Ensure coordinates are valid
+   - Check console for errors
+   - Verify tab is controlled
+
+3. **Navigation issues**
+   - Check URL format
+   - Verify network connection
+   - Check console for errors
 
 ## Contributing
 
@@ -95,50 +111,3 @@ project/
 ## License
 
 [Add License]
-
-## UI Testing
-
-### Prerequisites
-- Node.js installed
-- Chrome/Brave browser installed
-- Extension loaded in browser
-- Remote debugging enabled
-
-### Setup
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Build the extension:
-```bash
-npm run build
-```
-
-3. Load the extension in Chrome/Brave:
-- Navigate to chrome://extensions
-- Enable Developer mode
-- Click "Load unpacked"
-- Select the `dist` directory
-
-4. Enable remote debugging:
-- Launch Chrome/Brave with remote debugging enabled on port 9222
-- Ensure the extension is loaded and active
-
-5. Run the tests:
-```bash
-npm run test:ui
-```
-
-### Test Scenarios
-The test runner includes several predefined scenarios:
-- Basic navigation
-- Vision testing
-- Complex interactions
-- Screenshot analysis
-
-### Debugging
-- Check browser console for extension logs
-- Review error screenshots in test output
-- Check TROUBLESHOOTING.md for common issues
-- Monitor network requests in DevTools

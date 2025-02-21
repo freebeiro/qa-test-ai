@@ -195,61 +195,53 @@ class QAInterface {
 
             console.log('Executing command:', commandData);
 
-            // Execute the command based on its type
-            switch (commandData.type) {
-                case 'navigation':
-                    await this.browserTab.navigate(commandData.url);
-                    break;
-                case 'back':
-                    await this.browserTab.executeScript(() => window.history.back());
-                    break;
-                case 'forward':
-                    await this.browserTab.executeScript(() => window.history.forward());
-                    break;
-                case 'refresh':
-                    await this.browserTab.executeScript(() => window.location.reload());
-                    break;
-                case 'scroll':
-                    await this.browserTab.executeScript((direction) => {
-                        window.scrollBy(0, direction === 'down' ? 300 : -300);
-                    }, [commandData.direction]);
-                    break;
-                case 'search':
-                    const searchUrl = commandData.engine === 'google' 
-                        ? `https://www.google.com/search?q=${encodeURIComponent(commandData.query)}`
-                        : `https://www.google.com/search?q=${encodeURIComponent(commandData.query)}`;
-                    await this.browserTab.navigate(searchUrl);
-                    break;
-                default:
-                    // For other commands, send to background script
-                    const response = await chrome.runtime.sendMessage({
-                        type: 'EXECUTE_COMMAND',
-                        command: commandData
-                    });
-
-                    if (!response.success) {
-                        throw new Error(response.error || 'Command execution failed');
-                    }
-
-                    if (response.screenshot) {
-                        chatEntry.screenshots.push({
-                            data: response.screenshot,
-                            caption: 'Command Result'
-                        });
-                    }
-            }
-
-            // Capture screenshot after command execution
-            try {
+            // Handle different command types
+            if (commandData.type === 'navigation') {
+                // Handle navigation directly through browser manager
+                await this.browserTab.navigate(commandData.url);
+                
+                // Wait a bit for the page to settle
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Try to capture screenshot after navigation
                 const screenshot = await this.browserTab.captureScreenshot();
                 if (screenshot) {
                     chatEntry.screenshots.push({
                         data: screenshot,
+                        caption: 'Navigation Result'
+                    });
+                }
+            } else if (commandData.type === 'mouse_move_coords') {
+                // Handle mouse movement
+                await this.browserTab.executeScript(
+                    (data) => {
+                        const cursor = document.getElementById('qa-mouse-cursor');
+                        if (cursor) {
+                            cursor.style.left = `${data.x}px`;
+                            cursor.style.top = `${data.y}px`;
+                            return { success: true };
+                        }
+                        return { success: false, error: 'Cursor not found' };
+                    },
+                    [commandData]
+                );
+            } else {
+                // For other commands, send to background script
+                const response = await chrome.runtime.sendMessage({
+                    type: 'EXECUTE_COMMAND',
+                    command: commandData
+                });
+
+                if (!response?.success) {
+                    throw new Error(response?.error || 'Command execution failed');
+                }
+
+                if (response?.screenshot) {
+                    chatEntry.screenshots.push({
+                        data: response.screenshot,
                         caption: 'Command Result'
                     });
                 }
-            } catch (error) {
-                console.error('Screenshot capture failed:', error);
             }
 
         } catch (error) {

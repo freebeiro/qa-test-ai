@@ -12,19 +12,40 @@ export class VisionService {
 }
 ```
 
+### Mouse Control System
+```javascript
+// Cursor injection and management
+async function injectCursor(tabId) {
+    // Inject CSS and create cursor element
+    // Handle cursor visibility and positioning
+    // Maintain cursor state during page changes
+}
+
+// Mouse movement handling
+function handleMouseMove(request, sendResponse) {
+    // Update cursor position
+    // Handle transitions and animations
+    // Provide feedback on movement completion
+}
+```
+
 ### Command System
 ```javascript
-class CommandProcessor {
-    parseCommand(input) {
-        const commands = [
-            {
-                type: 'test_vision',
-                pattern: /^test\s+vision$/i,
-                handler: () => ({ type: 'test_vision' })
-            }
-        ];
-    }
-}
+// Available Commands
+- move mouse to coordinates X Y  // Move cursor to specific coordinates
+- go to [url]                   // Navigate to URL with cursor persistence
+- back                          // Browser back with cursor persistence
+- forward                       // Browser forward with cursor persistence
+- refresh                       // Refresh page with cursor persistence
+```
+
+### Tab Management
+```javascript
+// Tab control and state management
+- Track controlled tabs
+- Handle tab activation/deactivation
+- Manage cursor state across navigation
+- Clean up on tab/window close
 ```
 
 ### UI Components
@@ -106,39 +127,65 @@ chrome.runtime.onConnect.addListener(function(port) {
 });
 ```
 
+## Key Features
+
+### 1. Cursor Management
+- Reliable cursor visibility
+- Smooth cursor movement
+- Persistence across navigation
+- Proper cleanup on deactivation
+
+### 2. Command Processing
+- Coordinate-based movement
+- Navigation with cursor persistence
+- Basic browser controls
+- Error handling and feedback
+
+### 3. Tab Control
+- Single tab control
+- Proper state management
+- Navigation handling
+- Internal URL protection
+
 ## Recent Updates
 
-1. Command System Improvements
-   - Added missing commands (back, forward, scroll, refresh)
-   - Enhanced command processing with better error handling
-   - Integrated vision capabilities with commands
+1. Cursor System Improvements
+   - Centralized cursor injection
+   - Reliable visibility management
+   - Smooth transitions
+   - Navigation persistence
 
-2. Screenshot Integration
-   - Automatic screenshot capture after each command
-   - Screenshot capture on page load completion
-   - Visual feedback in chat history
+2. Code Cleanup
+   - Removed unused cursor styles
+   - Simplified movement logic
+   - Consolidated command patterns
+   - Improved error handling
 
-3. Vision Features
-   - Ollama vision model integration
-   - Element detection and analysis
-   - Smart click suggestions
+3. Documentation
+   - Updated implementation details
+   - Clarified command system
+   - Added troubleshooting guide
+   - Improved code organization
 
 ## Next Steps
 
 1. Testing
-   - Add unit tests for new commands
-   - Integration tests for screenshot system
-   - Error scenario handling
+   - Add cursor movement tests
+   - Verify navigation persistence
+   - Test error scenarios
+   - Add command validation
 
-2. UI Improvements
-   - Loading states during command execution
-   - Better error display
-   - Enhanced visual feedback
+2. Enhancements
+   - Add more movement patterns
+   - Improve cursor styling options
+   - Add cursor size controls
+   - Enhance movement animation
 
-3. Vision Enhancements
-   - Improve element detection accuracy
-   - Add more intelligent action suggestions
-   - Enhanced layout analysis
+3. Documentation
+   - Add usage examples
+   - Document common issues
+   - Add configuration guide
+   - Update troubleshooting steps
 
 # Implementation Details
 
