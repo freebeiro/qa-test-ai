@@ -297,3 +297,122 @@ This implementation ensures:
 - Better user experience with proper window dimensions
 - Efficient window reuse and state management
 - Clean handling of window lifecycle events
+
+## Cursor Management System
+
+### Overview
+The cursor management system provides a reliable, visible cursor for automated testing. It handles:
+- Cursor creation and injection
+- Visibility maintenance
+- Movement animation
+- Cross-page persistence
+
+### Implementation Details
+
+1. **Cursor Creation**
+```javascript
+// Direct DOM injection
+const cursor = document.createElement('div');
+cursor.id = 'qa-mouse-cursor';
+document.body.appendChild(cursor);
+
+// Style injection
+const style = document.createElement('style');
+style.id = 'qa-cursor-styles';
+style.textContent = `
+    #qa-mouse-cursor {
+        position: fixed !important;
+        z-index: 2147483647 !important;
+        pointer-events: none !important;
+        transform: translate(-50%, -50%) !important;
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+    }
+`;
+document.head.appendChild(style);
+```
+
+2. **Visibility Management**
+```javascript
+// Periodic visibility check
+setInterval(() => {
+    const cursor = document.getElementById('qa-mouse-cursor');
+    if (!cursor || !cursor.isConnected) {
+        injectCursor(tabId);
+    }
+}, 500);
+
+// Style enforcement
+cursor.style.display = 'block';
+cursor.style.visibility = 'visible';
+cursor.style.opacity = '1';
+```
+
+3. **Movement System**
+```javascript
+// Smooth movement with cubic bezier
+cursor.style.transition = 'all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)';
+
+// Position update
+cursor.style.left = `${x}px`;
+cursor.style.top = `${y}px`;
+
+// Transform for accurate positioning
+cursor.style.transform = 'translate(-50%, -50%)';
+```
+
+4. **Cross-page Persistence**
+```javascript
+// Handle navigation
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+    if (changeInfo.status === 'complete' && controlledTabs.has(tabId)) {
+        await injectCursor(tabId);
+    }
+});
+
+// Cleanup on tab switch
+async function deactivateTab(tabId) {
+    const cursor = document.getElementById('qa-mouse-cursor');
+    if (cursor) cursor.remove();
+}
+```
+
+### Key Features
+
+1. **Reliability**
+   - Maximum z-index (2147483647)
+   - !important flags on all styles
+   - Periodic visibility checks
+   - Auto-recovery system
+
+2. **Performance**
+   - RequestAnimationFrame for animations
+   - Efficient DOM operations
+   - Optimized style updates
+   - Clean cleanup process
+
+3. **Visibility**
+   - High contrast colors
+   - Glow effect for visibility
+   - Size optimized for viewing
+   - No interference with page elements
+
+4. **Movement**
+   - Smooth transitions
+   - Natural easing
+   - Precise positioning
+   - Responsive to commands
+
+### Usage Example
+
+```javascript
+// Move cursor to coordinates
+await chrome.tabs.sendMessage(tabId, {
+    type: 'mouse_move_coords',
+    data: { x: 200, y: 200 }
+});
+
+// Move cursor to element
+const element = await findElement(text);
+const rect = element.getBoundingClientRect();
+await moveCursor(rect.left + rect.width/2, rect.top + rect.height/2);
+```

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 ### Added
+- Enhanced cursor management system with improved visibility and persistence
+- Comprehensive cursor troubleshooting documentation
+- Smooth cursor movement with cubic bezier animations
+- Periodic visibility checks and auto-recovery system
 - Enhanced browser window management with better error handling
 - New documentation files (PROJECT_STRUCTURE.md, TROUBLESHOOTING.md)
 - Improved content script integration
@@ -12,6 +16,9 @@
 - Browser connection handling and extension popup automation
 
 ### Changed
+- Enhanced z-index management for reliable cursor display
+- Improved cursor style enforcement with !important flags
+- Added RequestAnimationFrame for better performance
 - Streamlined extension architecture
 - Updated manifest.json permissions and security policies
 - Improved build process configuration
