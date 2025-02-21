@@ -1,6 +1,13 @@
 # Changelog
 
-## [0.2.0] - 2025-02-16
+## [Unreleased]
+- Added UI testing framework with Playwright integration
+- Added support for running tests against existing Brave browser session
+- Added debug server for capturing extension logs
+- Added test scenarios for basic navigation, vision testing, and complex interactions
+- Added browser connection handling and extension popup automation
+
+## [1.0.0] - 2024-02-16
 
 ### Added
 - Integration with Ollama's llama3.2-vision model for visual analysis

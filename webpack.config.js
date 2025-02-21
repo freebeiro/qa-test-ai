@@ -5,7 +5,8 @@ module.exports = {
   mode: 'development',  // Changed to development for better debugging
   entry: {
     popup: './popup.js',
-    background: './background.js'
+    background: './background.js',
+    content: './content.js'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -43,6 +44,10 @@ module.exports = {
       ],
     }),
   ],
+  watchOptions: {
+    ignored: /node_modules/,
+    poll: 1000
+  },
   resolve: {
     extensions: ['.js'],
     fallback: {}

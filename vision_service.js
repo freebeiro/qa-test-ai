@@ -12,7 +12,12 @@ export class VisionService {
             const response = await fetch(this.ollamaEndpoint, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
                 },
                 body: JSON.stringify({
                     model: this.model,
@@ -155,18 +160,41 @@ export class VisionService {
     }
 
     parseLocation(locationText) {
-        // Convert textual location to coordinates
+        // Convert textual location to more precise coordinates
         const coords = {
             x: 0.5,  // Default to center
             y: 0.5
         };
 
-        // Adjust coordinates based on location description
-        if (locationText.includes('top')) coords.y = 0.2;
-        if (locationText.includes('bottom')) coords.y = 0.8;
-        if (locationText.includes('left')) coords.x = 0.2;
-        if (locationText.includes('right')) coords.x = 0.8;
+        // More granular coordinate adjustments
+        if (locationText.includes('top')) {
+            coords.y = locationText.includes('very top') ? 0.1 : 0.25;
+        }
+        if (locationText.includes('bottom')) {
+            coords.y = locationText.includes('very bottom') ? 0.9 : 0.75;
+        }
+        if (locationText.includes('left')) {
+            coords.x = locationText.includes('far left') ? 0.1 : 0.25;
+        }
+        if (locationText.includes('right')) {
+            coords.x = locationText.includes('far right') ? 0.9 : 0.75;
+        }
+        if (locationText.includes('center')) {
+            coords.x = 0.5;
+            coords.y = 0.5;
+        }
 
         return coords;
     }
-} 
+
+    // Helper method to ensure page is fully loaded
+    async waitForPageLoad() {
+        return new Promise((resolve) => {
+            if (document.readyState === 'complete') {
+                resolve();
+            } else {
+                window.addEventListener('load', resolve);
+            }
+        });
+    }
+}

@@ -1,24 +1,27 @@
 {
   "name": "qa-testing-assistant",
   "version": "1.0.0",
-  "description": "QA Testing Assistant with Vision-Language AI",
+  "description": "Chrome extension for automated testing with vision model integration",
+  "main": "popup.js",
   "scripts": {
-    "build": "webpack --mode development",
+    "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "test": "jest"
+    "debug": "node debug_server.js",
+    "test:ui": "node ui_test_runner.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
     "playwright": "^1.41.2",
-    "playwright-core": "^1.41.2"
+    "playwright-core": "^1.41.2",
+    "electron": "^28.2.0"
   },
   "devDependencies": {
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "copy-webpack-plugin": "^11.0.0",
     "@babel/core": "^7.23.9",
     "@babel/preset-env": "^7.23.9",
-    "babel-loader": "^9.1.3",
-    "bufferutil": "^4.0.9",
-    "copy-webpack-plugin": "^12.0.2",
-    "utf-8-validate": "^6.0.5",
-    "webpack": "^5.90.1",
-    "webpack-cli": "^5.1.4"
+    "babel-loader": "^9.1.3"
   }
 }

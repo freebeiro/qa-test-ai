@@ -47,6 +47,43 @@ export class CommandProcessor {
                 type: 'search',
                 pattern: /^search(?:\s+for)?\s+['"]?([^'"]+)['"]?$/i,
                 handler: (match) => ({ type: 'search', query: match[1] })
+            },
+            // Back command
+            {
+                type: 'back',
+                pattern: /^back$/i,
+                handler: () => ({ type: 'back' })
+            },
+            // Forward command
+            {
+                type: 'forward',
+                pattern: /^forward$/i,
+                handler: () => ({ type: 'forward' })
+            },
+            // Refresh command
+            {
+                type: 'refresh',
+                pattern: /^refresh$/i,
+                handler: () => ({ type: 'refresh' })
+            },
+            // Scroll commands
+            {
+                type: 'scroll',
+                pattern: /^scroll\s+(up|down)$/i,
+                handler: (match) => ({ 
+                    type: 'scroll', 
+                    direction: match[1].toLowerCase() 
+                })
+            },
+            // Google search command
+            {
+                type: 'search',
+                pattern: /^google\s+['"]?([^'"]+)['"]?$/i,
+                handler: (match) => ({ 
+                    type: 'search', 
+                    query: match[1],
+                    engine: 'google'
+                })
             }
         ];
 

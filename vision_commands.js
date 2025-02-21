@@ -1,5 +1,16 @@
-import { VisionEnhancedCommand } from './commands.js';
+import { VisionService } from './vision_service.js';
+import { Command } from './commands.js';
 
+// Base class for vision-enhanced commands
+export class VisionEnhancedCommand extends Command {
+    constructor(browserTab) {
+        super();
+        this.browserTab = browserTab;
+        this.visionService = new VisionService();
+    }
+}
+
+// Command for testing vision capabilities
 export class TestVisionCommand extends VisionEnhancedCommand {
     constructor(browserTab) {
         super(browserTab);
@@ -10,14 +21,12 @@ export class TestVisionCommand extends VisionEnhancedCommand {
         try {
             console.log('📸 Capturing screenshot for vision test...');
             const screenshot = await this.browserTab.captureScreenshot();
-            
             const base64Image = screenshot.replace(/^data:image\/\w+;base64,/, '');
-            
+
             console.log('🔍 Running vision analysis...');
             const analysis = await this.visionService.analyzeScreenshot(base64Image);
-            
             console.log('📊 Vision analysis results:', analysis);
-            
+
             return {
                 success: true,
                 message: 'Vision analysis completed',

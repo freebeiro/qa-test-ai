@@ -197,11 +197,4 @@ export class FindAndClickCommand extends Command {
     }
 }
 
-// Vision-enhanced base command
-export class VisionEnhancedCommand extends Command {
-    constructor(browserTab) {
-        super();
-        this.browserTab = browserTab;
-        this.visionService = new VisionService();
-    }
-}
+// End of command classes

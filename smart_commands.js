@@ -1,25 +1,13 @@
 import { VisionService } from './vision_service.js';
-
-// Base class for vision-enhanced commands
-export class VisionEnhancedCommand {
-    constructor(browserTab) {
-        this.browserTab = browserTab;
-        this.visionService = new VisionService();
-    }
-
-    async getPageAnalysis() {
-        const screenshot = await this.browserTab.captureScreenshot();
-        return await this.visionService.analyzeScreenshot(
-            screenshot.replace(/^data:image\/[a-z]+;base64,/, '')
-        );
-    }
-}
+import { Command } from './commands.js';
 
 // Smart click command that uses vision to understand and click elements
-export class SmartClickCommand extends VisionEnhancedCommand {
+export class SmartClickCommand extends Command {
     constructor(target, browserTab) {
-        super(browserTab);
+        super();
         this.target = target;
+        this.browserTab = browserTab;
+        this.visionService = new VisionService();
         console.log(`🎯 Creating SmartClickCommand for: "${target}"`);
     }
 

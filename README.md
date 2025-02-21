@@ -82,3 +82,59 @@ project/
 ## License
 
 [Add License]
+
+## UI Testing
+
+### Prerequisites
+- Node.js installed
+- Brave browser installed
+- Extension loaded in Brave
+- Remote debugging enabled in Brave
+
+### Setup
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start the debug server:
+```bash
+npm run debug
+```
+
+3. Launch Brave with debugging enabled:
+```bash
+chmod +x start-brave.sh
+./start-brave.sh
+```
+
+4. Run the tests:
+```bash
+npm run test:ui
+```
+
+### Test Scenarios
+The test runner includes several predefined scenarios:
+- Basic navigation
+- Vision testing
+- Complex interactions
+
+Add new scenarios in `ui_test_runner.js`:
+```javascript
+const scenarios = [
+    {
+        name: 'Your Scenario',
+        commands: [
+            'command 1',
+            'command 2',
+            // ...
+        ]
+    }
+];
+```
+
+### Debugging
+- Check the debug server output for extension logs
+- Look for error screenshots in the project root
+- Review browser console for additional errors
+- Check TROUBLESHOOTING.md for common issues

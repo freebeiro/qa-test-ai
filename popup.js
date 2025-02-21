@@ -22,29 +22,62 @@ class QAInterface {
         }
 
         this.setupEventListeners();
+        this.setupAutoResize();
         console.log('🔧 QAInterface initialized');
     }
 
-    // Rest of your working QAInterface code...
     setupEventListeners() {
         // Send button click
-        this.sendButton.addEventListener('click', () => {
-            const command = this.input.value.trim();
-            if (command) {
-                this.handleCommand(command);
+        this.sendButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.submitCommand();
+        });
+
+        // Enter key press (without shift)
+        this.input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitCommand();
             }
         });
 
-        // Enter key press
-        this.input.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                const command = this.input.value.trim();
-                if (command) {
-                    this.handleCommand(command);
-                }
-            }
+        // Input changes for auto-resize
+        this.input.addEventListener('input', () => {
+            this.autoResizeInput();
         });
+    }
+
+    setupAutoResize() {
+        // Set initial height
+        this.autoResizeInput();
+        
+        // Observe window resize
+        new ResizeObserver(() => {
+            this.autoResizeInput();
+        }).observe(this.input);
+    }
+
+    autoResizeInput() {
+        const input = this.input;
+        input.style.height = 'auto';
+        input.style.height = (input.scrollHeight) + 'px';
+        
+        // Limit max height
+        if (input.scrollHeight > 120) {
+            input.style.height = '120px';
+            input.style.overflowY = 'auto';
+        } else {
+            input.style.overflowY = 'hidden';
+        }
+    }
+
+    submitCommand() {
+        const command = this.input.value.trim();
+        if (command) {
+            this.handleCommand(command);
+            this.input.value = '';
+            this.autoResizeInput();
+        }
     }
 
     addToChatHistory(entry) {
@@ -71,20 +104,35 @@ class QAInterface {
                 screenshotsDiv.className = 'screenshots-container';
                 
                 entry.screenshots.forEach((screenshot, idx) => {
-                    const imgWrapper = document.createElement('div');
-                    imgWrapper.className = 'screenshot-wrapper';
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'screenshot-wrapper';
                     
+                    // Create image
                     const img = document.createElement('img');
                     img.src = screenshot.data;
                     img.alt = `Step ${idx + 1}`;
                     
+                    // Add click handler for fullscreen
+                    img.addEventListener('click', () => this.showFullscreenImage(screenshot.data));
+                    
+                    // Add controls
+                    const controls = document.createElement('div');
+                    controls.className = 'screenshot-controls';
+                    
+                    const zoomButton = document.createElement('button');
+                    zoomButton.textContent = '🔍 View Full Size';
+                    zoomButton.addEventListener('click', () => this.showFullscreenImage(screenshot.data));
+                    controls.appendChild(zoomButton);
+                    
+                    // Add caption
                     const caption = document.createElement('div');
                     caption.className = 'screenshot-caption';
                     caption.textContent = screenshot.caption || `Step ${idx + 1}`;
                     
-                    imgWrapper.appendChild(img);
-                    imgWrapper.appendChild(caption);
-                    screenshotsDiv.appendChild(imgWrapper);
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(controls);
+                    wrapper.appendChild(caption);
+                    screenshotsDiv.appendChild(wrapper);
                 });
                 
                 messageDiv.appendChild(screenshotsDiv);
@@ -105,6 +153,30 @@ class QAInterface {
         this.screenshotDiv.scrollTop = this.screenshotDiv.scrollHeight;
     }
 
+    showFullscreenImage(imageUrl) {
+        const fullscreenDiv = document.createElement('div');
+        fullscreenDiv.className = 'screenshot-fullscreen';
+        
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        
+        const closeButton = document.createElement('button');
+        closeButton.className = 'close-button';
+        closeButton.textContent = '×';
+        closeButton.addEventListener('click', () => fullscreenDiv.remove());
+        
+        // Close on background click
+        fullscreenDiv.addEventListener('click', (e) => {
+            if (e.target === fullscreenDiv) {
+                fullscreenDiv.remove();
+            }
+        });
+        
+        fullscreenDiv.appendChild(img);
+        fullscreenDiv.appendChild(closeButton);
+        document.body.appendChild(fullscreenDiv);
+    }
+
     async handleCommand(command) {
         const chatEntry = {
             command,
@@ -115,25 +187,69 @@ class QAInterface {
         try {
             this.disableUI();
             
+            // Process command to get structured data
             const commandData = await this.commandProcessor.processCommand(command);
             if (!commandData) {
                 throw new Error('Invalid command');
             }
 
-            const cmd = this.createCommand(commandData);
-            if (!cmd) {
-                throw new Error('Command creation failed');
+            console.log('Executing command:', commandData);
+
+            // Execute the command based on its type
+            switch (commandData.type) {
+                case 'navigation':
+                    await this.browserTab.navigate(commandData.url);
+                    break;
+                case 'back':
+                    await this.browserTab.executeScript(() => window.history.back());
+                    break;
+                case 'forward':
+                    await this.browserTab.executeScript(() => window.history.forward());
+                    break;
+                case 'refresh':
+                    await this.browserTab.executeScript(() => window.location.reload());
+                    break;
+                case 'scroll':
+                    await this.browserTab.executeScript((direction) => {
+                        window.scrollBy(0, direction === 'down' ? 300 : -300);
+                    }, [commandData.direction]);
+                    break;
+                case 'search':
+                    const searchUrl = commandData.engine === 'google' 
+                        ? `https://www.google.com/search?q=${encodeURIComponent(commandData.query)}`
+                        : `https://www.google.com/search?q=${encodeURIComponent(commandData.query)}`;
+                    await this.browserTab.navigate(searchUrl);
+                    break;
+                default:
+                    // For other commands, send to background script
+                    const response = await chrome.runtime.sendMessage({
+                        type: 'EXECUTE_COMMAND',
+                        command: commandData
+                    });
+
+                    if (!response.success) {
+                        throw new Error(response.error || 'Command execution failed');
+                    }
+
+                    if (response.screenshot) {
+                        chatEntry.screenshots.push({
+                            data: response.screenshot,
+                            caption: 'Command Result'
+                        });
+                    }
             }
 
-            await cmd.execute();
-            
-            // Capture final screenshot
-            const screenshot = await this.browserTab.captureScreenshot();
-            if (screenshot) {
-                chatEntry.screenshots.push({
-                    data: screenshot,
-                    caption: 'Result'
-                });
+            // Capture screenshot after command execution
+            try {
+                const screenshot = await this.browserTab.captureScreenshot();
+                if (screenshot) {
+                    chatEntry.screenshots.push({
+                        data: screenshot,
+                        caption: 'Command Result'
+                    });
+                }
+            } catch (error) {
+                console.error('Screenshot capture failed:', error);
             }
 
         } catch (error) {
@@ -142,8 +258,8 @@ class QAInterface {
         } finally {
             this.addToChatHistory(chatEntry);
             this.enableUI();
-            // Clear the input field after command execution
             this.input.value = '';
+            this.autoResizeInput();
         }
     }
 

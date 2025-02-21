@@ -6,6 +6,7 @@
 # Node
 node_modules/
 dist/
+build/
 
 # IDE
 .vscode/
@@ -18,3 +19,10 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Testing
+chrome-testing-profile/
+qa-testing-assistant.zip
+
+# Temporary files
+*.zip

@@ -17,25 +17,61 @@ export class BrowserTabManager {
                     const tab = await chrome.tabs.get(this.tabId);
                     this.windowId = tab.windowId;
                     console.log(`🔧 Initialized with browser tab ID: ${this.tabId}`);
+                    
+                    // Ensure the tab is ready
+                    await this.ensureTabActive();
                 } catch (error) {
                     console.error('Failed to get window ID:', error);
+                    // Try to create a new tab if getting the existing one fails
+                    await this.createNewTab();
                 }
             }
         });
     }
 
+    async createNewTab() {
+        try {
+            console.log('Creating new browser tab...');
+            const tab = await chrome.windows.create({ 
+                url: 'about:blank',
+                type: 'popup',
+                width: 800,
+                height: 600,
+                focused: true
+            });
+            this.tabId = tab.tabs[0].id;
+            this.windowId = tab.id;
+            console.log(`Created new window with ID: ${this.windowId} and tab ID: ${this.tabId}`);
+            
+            // Store the tab ID in extension state
+            await chrome.storage.local.set({ browserTabId: this.tabId });
+        } catch (error) {
+            console.error('Failed to create new window:', error);
+            throw error;
+        }
+    }
+
     async navigate(url) {
         await this.ensureTabActive();
-        return await chrome.tabs.update(this.tabId, { url });
+        // Ensure URL has protocol
+        const processedUrl = url.match(/^https?:\/\//) ? url : `https://${url}`;
+        return await chrome.tabs.update(this.tabId, { url: processedUrl });
     }
 
     async ensureTabActive() {
         if (!this.tabId || !this.windowId) {
-            throw new Error('Browser tab not initialized');
+            console.log('No active tab, creating new one...');
+            await this.createNewTab();
         }
-        await chrome.windows.update(this.windowId, { focused: true });
-        await chrome.tabs.update(this.tabId, { active: true });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        try {
+            await chrome.windows.update(this.windowId, { focused: true });
+            await chrome.tabs.update(this.tabId, { active: true });
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+            console.error('Failed to activate tab:', error);
+            await this.createNewTab();
+        }
     }
 
     async captureScreenshot() {
@@ -55,11 +91,12 @@ export class BrowserTabManager {
     async executeScript(func, args = []) {
         await this.ensureTabActive();
         try {
-            return await chrome.scripting.executeScript({
+            const results = await chrome.scripting.executeScript({
                 target: { tabId: this.tabId },
                 function: func,
                 args: args
             });
+            return results[0]?.result;
         } catch (error) {
             console.error('❌ Script execution failed:', error);
             throw error;
