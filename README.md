@@ -1,65 +1,140 @@
-# QA Testing Assistant with Vision-Language AI
+# QA Testing Assistant
 
-The QA Testing Assistant is an innovative Chrome extension that revolutionizes web testing by combining natural language processing with advanced browser automation. It enables testers to conduct sophisticated testing through simple conversational commands.
+Chrome extension for automated testing with vision model integration.
 
-## Latest Features
+## Requirements
 
-- **Enhanced Command Processing**: Improved pattern matching and error handling
-- **Smart Click Detection**: Multiple strategies for finding and clicking elements
-- **Smooth Scrolling**: Better scroll behavior with multiple directions
-- **Comprehensive Logging**: Emoji-based logging system for better debugging
-- **Improved Screenshot Capture**: Reliable screenshot functionality
-- **Better Error Handling**: Clear error messages and recovery
+- Node.js 14+
+- Chrome browser
+- Ollama with llama3.2-vision model
 
-## Key Commands
+## Setup
 
-The assistant supports various commands:
+1. **Install Dependencies**
+```bash
+npm install
+```
 
-- **Navigation**: 
-  - "go to example.com"
-  - "go back"
-  - "go forward"
-  - "refresh"
+2. **Build Extension**
+```bash
+npm run build
+```
 
-- **Search & Find**:
-  - "search for 'term'"
-  - "find 'text on page'"
-  - "find and click 'button text'"
+3. **Load in Chrome**
+- Open chrome://extensions/
+- Enable Developer mode
+- Load unpacked -> select dist folder
 
-- **Scrolling**:
-  - "scroll up"
-  - "scroll down"
-  - "scroll top"
-  - "scroll bottom"
+4. **Configure Ollama**
+- Ensure Ollama is running
+- Verify llama3.2-vision model is available
+- Check localhost:11434 access
 
-## Technical Architecture
+## Usage
 
-The system consists of three main components:
+### Basic Commands
+- `go to [url]` - Navigate to website
+- `click [element]` - Click on element
+- `search [term]` - Search on page
+- `test vision` - Analyze current page
 
-1. **Chrome Extension Frontend**:
-   - Chat-like interface
-   - Command processing
-   - Screenshot capture
-   - Browser interaction
+### Vision Features
+- Element detection
+- Layout analysis
+- Interactive elements
+- Visual hierarchy
 
-2. **Command Processing System**:
-   - Pattern matching
-   - Command execution
-   - Error handling
-   - State management
+## Development
 
-3. **Browser Integration**:
-   - Tab management
-   - Navigation control
-   - Element interaction
-   - Screenshot capture
+### Build Commands
+```bash
+# Development
+npm run dev
 
-## Prerequisites
+# Production
+npm run build
+```
 
-- Google Chrome Browser (latest version)
-- Developer mode enabled in Chrome
+### Project Structure
+```
+project/
+├── manifest.json      # Extension config
+├── popup.html        # UI template
+├── popup.js          # Core logic
+├── vision_service.js # Vision integration
+└── background.js     # Background service
+```
 
-## Installation
+## Troubleshooting
 
-1. Clone the repository:
-\`\`
+1. Check Ollama service status
+2. Verify model availability
+3. Check browser console
+4. Review error logs
+
+## Contributing
+
+1. Fork repository
+2. Create feature branch
+3. Submit pull request
+4. Follow code standards
+
+## License
+
+[Add License]
+
+## UI Testing
+
+### Prerequisites
+- Node.js installed
+- Brave browser installed
+- Extension loaded in Brave
+- Remote debugging enabled in Brave
+
+### Setup
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start the debug server:
+```bash
+npm run debug
+```
+
+3. Launch Brave with debugging enabled:
+```bash
+chmod +x start-brave.sh
+./start-brave.sh
+```
+
+4. Run the tests:
+```bash
+npm run test:ui
+```
+
+### Test Scenarios
+The test runner includes several predefined scenarios:
+- Basic navigation
+- Vision testing
+- Complex interactions
+
+Add new scenarios in `ui_test_runner.js`:
+```javascript
+const scenarios = [
+    {
+        name: 'Your Scenario',
+        commands: [
+            'command 1',
+            'command 2',
+            // ...
+        ]
+    }
+];
+```
+
+### Debugging
+- Check the debug server output for extension logs
+- Look for error screenshots in the project root
+- Review browser console for additional errors
+- Check TROUBLESHOOTING.md for common issues

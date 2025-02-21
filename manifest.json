@@ -5,17 +5,20 @@
   "description": "Assistant for QA testing",
   
   "permissions": [
-    "activeTab",
     "tabs",
-    "scripting"
+    "scripting",
+    "storage",
+    "activeTab"
   ],
-  
+
   "host_permissions": [
+    "http://localhost:11434/*",
+    "http://localhost:9222/*",
     "<all_urls>"
   ],
   
   "action": {
-    "default_title": "QA Testing Assistant",
+    "default_title": "A Testing Assistant",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -23,13 +26,20 @@
     }
   },
 
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.bundle.js"],
+      "run_at": "document_end"
+    }
+  ],
+
   "background": {
-    "service_worker": "background.bundle.js",
-    "type": "module"
+    "service_worker": "background.bundle.js"
   },
 
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:11434"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src * http://localhost:11434 ws://localhost:11434 http://localhost:9222 ws://localhost:9222"
   },
 
   "icons": {

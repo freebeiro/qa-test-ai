@@ -2,14 +2,14 @@
 <html>
 <head>
     <title>QA Testing Assistant</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         :root {
             --primary-color: #2196f3;
-            --bg-color: #f5f7fa;
+            --bg-color: #ffffff;
             --text-color: #333;
             --border-radius: 12px;
-            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow: 0 4px 16px rgba(0,0,0,0.15);
             --padding: 16px;
         }
 
@@ -20,10 +20,10 @@
         }
 
         body {
-            width: 100%;
+            width: 100vw;
             height: 100vh;
             margin: 0;
-            padding: var(--padding);
+            padding: 0;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: var(--bg-color);
             color: var(--text-color);
@@ -36,64 +36,54 @@
             display: flex;
             flex-direction: column;
             height: 100%;
+            padding: var(--padding);
             gap: 16px;
         }
 
         #screenshot {
             flex: 1;
-            min-height: 0; /* Important for flex container */
+            min-height: 0;
             overflow-y: auto;
-            background: white;
+            background: #f8f9fa;
             border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
             padding: var(--padding);
             margin-bottom: 16px;
+            border: 1px solid #e9ecef;
         }
 
-        #screenshot img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            display: block;
-        }
-
-        .chat-container {
-            position: sticky;
-            bottom: 0;
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            padding: 12px;
-            margin-top: auto;
-        }
-
-        .input-container {
+        .input-group {
             display: flex;
             gap: 8px;
-            width: 100%;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: var(--border-radius);
+            border: 1px solid #e9ecef;
+            position: sticky;
+            bottom: 0;
         }
 
         #command-input {
             flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
+            padding: 12px;
+            border: none;
             border-radius: 8px;
-            font-family: inherit;
+            background: white;
             font-size: 14px;
+            line-height: 1.5;
             resize: none;
-            min-height: 36px;
-            max-height: 100px;
-            outline: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            min-height: 44px;
+            max-height: 120px;
             overflow-y: auto;
         }
 
         #command-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(33,150,243,0.1);
+            outline: 2px solid var(--primary-color);
+            box-shadow: 0 2px 6px rgba(33,150,243,0.2);
         }
 
         #send-button {
-            padding: 8px 16px;
+            padding: 12px 24px;
             background: var(--primary-color);
             color: white;
             border: none;
@@ -101,25 +91,56 @@
             cursor: pointer;
             font-weight: 500;
             transition: all 0.2s;
-            white-space: nowrap;
-            align-self: flex-end;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            height: 44px;
         }
 
         #send-button:hover {
             background: #1976d2;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(33,150,243,0.3);
+        }
+
+        #send-button:active {
+            transform: translateY(0);
         }
 
         #send-button:disabled {
-            background: #cccccc;
+            background: #ccc;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .user-message {
+            background: #e3f2fd;
+            margin-left: 20%;
+            border-radius: 12px 12px 2px 12px;
+        }
+
+        .assistant-message {
+            background: white;
+            margin-right: 20%;
+            border-radius: 12px 12px 12px 2px;
         }
 
         .error-message {
             color: #d32f2f;
             background: #ffebee;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 8px 0;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
         }
 
         /* Scrollbar styling */
@@ -128,65 +149,180 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: transparent;
+            background: #f1f1f1;
+            border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #cfd8dc;
+            background: #ccc;
             border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: #b0bec5;
+            background: #999;
+        }
+
+        /* Header */
+        .header {
+            padding: 16px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        /* Chat container */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
         }
 
         .chat-entry {
-            margin-bottom: 20px;
-            padding: 12px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .command-text {
             font-family: monospace;
-            color: #1976d2;
-            margin-bottom: 8px;
-            padding: 4px 8px;
-            background: #f5f7fa;
+            color: #666;
+            padding: 8px;
+            background: #f8f9fa;
             border-radius: 4px;
+            font-size: 14px;
         }
 
         .screenshots-container {
             display: flex;
             flex-direction: column;
             gap: 12px;
+            margin-top: 8px;
         }
 
         .screenshot-wrapper {
-            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .screenshot-wrapper img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            border-radius: 4px;
+            max-height: 400px; /* Limit maximum height */
         }
 
         .screenshot-caption {
-            font-size: 12px;
+            padding: 8px;
             color: #666;
-            margin-top: 4px;
+            font-size: 12px;
             text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+
+        /* Zoom controls for screenshots */
+        .screenshot-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .screenshot-controls button {
+            padding: 4px 8px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .screenshot-controls button:hover {
+            background: #1976d2;
+        }
+
+        .screenshot-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .screenshot-fullscreen img {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .screenshot-fullscreen .close-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>QA Testing Assistant</h1>
+    </div>
     <div id="app">
-        <div id="screenshot"></div>
-        <div class="chat-container">
-            <div class="input-container">
-                <textarea 
-                    id="command-input" 
-                    placeholder="Enter a command..."
-                    rows="1"
-                ></textarea>
-                <button id="send-button">Send</button>
-            </div>
+        <div class="chat-container" id="screenshot"></div>
+        <div class="input-group">
+            <textarea id="command-input" placeholder="Type your command here..." rows="1"></textarea>
+            <button id="send-button">Send</button>
         </div>
     </div>
     <script src="popup.bundle.js"></script>
