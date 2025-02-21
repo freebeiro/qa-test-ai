@@ -5,6 +5,11 @@
 - Enhanced browser window management with better error handling
 - New documentation files (PROJECT_STRUCTURE.md, TROUBLESHOOTING.md)
 - Improved content script integration
+- UI testing framework with Playwright integration
+- Support for running tests against existing Brave browser session
+- Debug server for capturing extension logs
+- Test scenarios for basic navigation, vision testing, and complex interactions
+- Browser connection handling and extension popup automation
 
 ### Changed
 - Streamlined extension architecture
@@ -16,11 +21,6 @@
 - Unused proxy and playwright services
 - Legacy scripts and commands
 - Redundant build scripts
-- Added UI testing framework with Playwright integration
-- Added support for running tests against existing Brave browser session
-- Added debug server for capturing extension logs
-- Added test scenarios for basic navigation, vision testing, and complex interactions
-- Added browser connection handling and extension popup automation
 
 ## [1.0.0] - 2024-02-16
 

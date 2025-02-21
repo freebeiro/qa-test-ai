@@ -65,15 +65,17 @@ project/
 ├── content.js       # Webpage interaction script
 ├── browser_manager.js # Browser control service
 ├── vision_service.js  # Vision model integration
-├── commands/
-│   ├── commands.js       # Basic commands
-│   ├── smart_commands.js # AI commands
-│   └── vision_commands.js# Vision commands
-└── docs/
-    ├── README.md         # Project overview
-    ├── IMPLEMENTATION.md # Technical details
-    ├── TROUBLESHOOTING.md# Common issues
-    └── CHANGELOG.md     # Version history
+├── command_processor.js # Command execution engine
+├── commands.js        # Basic commands
+├── smart_commands.js  # AI commands
+├── vision_commands.js # Vision commands
+└── docs/             # Project documentation
+    ├── README.md
+    ├── IMPLEMENTATION.md
+    ├── TROUBLESHOOTING.md
+    ├── CHANGELOG.md
+    ├── PROJECT_STRUCTURE.md
+    └── PROJECT_KNOWLEDGE.md
 ```
 
 ## Troubleshooting
@@ -98,9 +100,9 @@ project/
 
 ### Prerequisites
 - Node.js installed
-- Brave browser installed
-- Extension loaded in Brave
-- Remote debugging enabled in Brave
+- Chrome/Brave browser installed
+- Extension loaded in browser
+- Remote debugging enabled
 
 ### Setup
 1. Install dependencies:
@@ -108,18 +110,22 @@ project/
 npm install
 ```
 
-2. Start the debug server:
+2. Build the extension:
 ```bash
-npm run debug
+npm run build
 ```
 
-3. Launch Brave with debugging enabled:
-```bash
-chmod +x start-brave.sh
-./start-brave.sh
-```
+3. Load the extension in Chrome/Brave:
+- Navigate to chrome://extensions
+- Enable Developer mode
+- Click "Load unpacked"
+- Select the `dist` directory
 
-4. Run the tests:
+4. Enable remote debugging:
+- Launch Chrome/Brave with remote debugging enabled on port 9222
+- Ensure the extension is loaded and active
+
+5. Run the tests:
 ```bash
 npm run test:ui
 ```
@@ -129,23 +135,10 @@ The test runner includes several predefined scenarios:
 - Basic navigation
 - Vision testing
 - Complex interactions
-
-Add new scenarios in `ui_test_runner.js`:
-```javascript
-const scenarios = [
-    {
-        name: 'Your Scenario',
-        commands: [
-            'command 1',
-            'command 2',
-            // ...
-        ]
-    }
-];
-```
+- Screenshot analysis
 
 ### Debugging
-- Check the debug server output for extension logs
-- Look for error screenshots in the project root
-- Review browser console for additional errors
+- Check browser console for extension logs
+- Review error screenshots in test output
 - Check TROUBLESHOOTING.md for common issues
+- Monitor network requests in DevTools
