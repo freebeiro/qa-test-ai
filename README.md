@@ -58,11 +58,22 @@ npm run build
 ### Project Structure
 ```
 project/
-├── manifest.json      # Extension config
-├── popup.html        # UI template
-├── popup.js          # Core logic
-├── vision_service.js # Vision integration
-└── background.js     # Background service
+├── manifest.json        # Extension configuration
+├── background.js       # Background service worker
+├── popup.html         # Extension UI template
+├── popup.js          # UI logic and interactions
+├── content.js       # Webpage interaction script
+├── browser_manager.js # Browser control service
+├── vision_service.js  # Vision model integration
+├── commands/
+│   ├── commands.js       # Basic commands
+│   ├── smart_commands.js # AI commands
+│   └── vision_commands.js# Vision commands
+└── docs/
+    ├── README.md         # Project overview
+    ├── IMPLEMENTATION.md # Technical details
+    ├── TROUBLESHOOTING.md# Common issues
+    └── CHANGELOG.md     # Version history
 ```
 
 ## Troubleshooting
