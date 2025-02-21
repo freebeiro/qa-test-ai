@@ -1,6 +1,21 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- Enhanced browser window management with better error handling
+- New documentation files (PROJECT_STRUCTURE.md, TROUBLESHOOTING.md)
+- Improved content script integration
+
+### Changed
+- Streamlined extension architecture
+- Updated manifest.json permissions and security policies
+- Improved build process configuration
+- Enhanced error handling and logging
+
+### Removed
+- Unused proxy and playwright services
+- Legacy scripts and commands
+- Redundant build scripts
 - Added UI testing framework with Playwright integration
 - Added support for running tests against existing Brave browser session
 - Added debug server for capturing extension logs
