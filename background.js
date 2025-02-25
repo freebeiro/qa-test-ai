@@ -118,6 +118,14 @@ async function handleCommand(command, tabId) {
             case 'refresh':
                 return await handleRefreshCommand(tabId, beforeScreenshot);
                 
+            case 'input':
+                // Handle input command with field and text or just text
+                if (command.field) {
+                    return await handleInputCommand(command.field, command.text, tabId, beforeScreenshot);
+                } else {
+                    return await handleSimpleInputCommand(command.text, tabId, beforeScreenshot);
+                }
+                
             case 'ensure_cursor':
                 await injectCursor(tabId);
                 return { success: true, message: 'Cursor injected successfully' };
@@ -545,6 +553,340 @@ async function handleRefreshCommand(tabId, beforeScreenshot) {
     return { 
         success: true, 
         message: 'Page refreshed',
+        beforeScreenshot,
+        afterScreenshot
+    };
+}
+
+// Handle input command with field identifier
+async function handleInputCommand(field, text, tabId, beforeScreenshot) {
+    console.log(`Executing input for field "${field}" with text: "${text}"`);
+    
+    // Execute input directly in the page
+    const result = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (field, text) => {
+            console.log(`Looking for input field with identifier: "${field}"`);
+            
+            // Helper function to get all input elements
+            function getAllInputElements() {
+                return Array.from(document.querySelectorAll(
+                    'input:not([type="submit"]):not([type="button"]):not([type="reset"]), ' +
+                    'textarea, [contenteditable="true"], ' +
+                    '[role="textbox"], [role="searchbox"], [role="combobox"]'
+                ));
+            }
+            
+            // Helper to get element label or placeholder
+            function getElementIdentifiers(element) {
+                // Get various attributes that might identify the field
+                const id = element.id || '';
+                const name = element.name || '';
+                const placeholder = element.getAttribute('placeholder') || '';
+                const ariaLabel = element.getAttribute('aria-label') || '';
+                const dataTestId = element.getAttribute('data-testid') || '';
+                const className = element.className || '';
+                
+                // Get associated label if any
+                let labelText = '';
+                if (element.id) {
+                    const label = document.querySelector(`label[for="${element.id}"]`);
+                    if (label) {
+                        labelText = label.textContent.trim();
+                    }
+                }
+                
+                // Check for parent label
+                let parentLabel = '';
+                let parent = element.parentElement;
+                while (parent && !parentLabel) {
+                    if (parent.tagName === 'LABEL') {
+                        parentLabel = parent.textContent.trim();
+                        break;
+                    }
+                    parent = parent.parentElement;
+                }
+                
+                return {
+                    id,
+                    name,
+                    placeholder,
+                    ariaLabel,
+                    dataTestId,
+                    className,
+                    labelText,
+                    parentLabel,
+                    // Combined text for easier matching
+                    allText: [id, name, placeholder, ariaLabel, dataTestId, labelText, parentLabel]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase()
+                };
+            }
+            
+            // 1. Get all input elements
+            const inputElements = getAllInputElements();
+            console.log(`Found ${inputElements.length} input elements`);
+            
+            // 2. Try to find the input field by various identifiers
+            let inputField = null;
+            const fieldLower = field.toLowerCase();
+            
+            // Try to find by exact match on various attributes
+            inputField = inputElements.find(el => {
+                const identifiers = getElementIdentifiers(el);
+                return (
+                    identifiers.id.toLowerCase() === fieldLower ||
+                    identifiers.name.toLowerCase() === fieldLower ||
+                    identifiers.placeholder.toLowerCase() === fieldLower ||
+                    identifiers.ariaLabel.toLowerCase() === fieldLower ||
+                    identifiers.labelText.toLowerCase() === fieldLower ||
+                    identifiers.parentLabel.toLowerCase() === fieldLower
+                );
+            });
+            
+            // If no exact match, try contains match
+            if (!inputField) {
+                inputField = inputElements.find(el => {
+                    const identifiers = getElementIdentifiers(el);
+                    return identifiers.allText.includes(fieldLower);
+                });
+            }
+            
+            // Try by CSS selector as a last resort
+            if (!inputField) {
+                try {
+                    const el = document.querySelector(field);
+                    if (el && (
+                        el.tagName === 'INPUT' || 
+                        el.tagName === 'TEXTAREA' || 
+                        el.getAttribute('contenteditable') === 'true' ||
+                        el.getAttribute('role') === 'textbox' ||
+                        el.getAttribute('role') === 'searchbox' ||
+                        el.getAttribute('role') === 'combobox'
+                    )) {
+                        inputField = el;
+                    }
+                } catch (e) {
+                    // Invalid selector, continue
+                }
+            }
+            
+            // If input field found, enter text
+            if (inputField) {
+                console.log('Found input field:', inputField);
+                
+                // Highlight the field
+                const originalBg = inputField.style.backgroundColor;
+                const originalOutline = inputField.style.outline;
+                
+                inputField.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                inputField.style.outline = '2px solid yellow';
+                
+                // Scroll field into view
+                inputField.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                
+                // Focus the field
+                inputField.focus();
+                
+                // Clear existing value if any
+                if (inputField.tagName === 'INPUT' || inputField.tagName === 'TEXTAREA') {
+                    inputField.value = '';
+                } else if (inputField.getAttribute('contenteditable') === 'true') {
+                    inputField.textContent = '';
+                }
+                
+                // Enter text based on element type
+                if (inputField.tagName === 'INPUT' || inputField.tagName === 'TEXTAREA') {
+                    // For standard input elements
+                    inputField.value = text;
+                    
+                    // Trigger input and change events
+                    inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                    inputField.dispatchEvent(new Event('change', { bubbles: true }));
+                } else if (inputField.getAttribute('contenteditable') === 'true') {
+                    // For contenteditable elements
+                    inputField.textContent = text;
+                    
+                    // Trigger input event
+                    inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                
+                // Reset styles after a delay
+                setTimeout(() => {
+                    inputField.style.backgroundColor = originalBg;
+                    inputField.style.outline = originalOutline;
+                }, 1000);
+                
+                return true;
+            } else {
+                console.error(`No input field found with identifier: ${field}`);
+                return false;
+            }
+        },
+        args: [field, text]
+    });
+    
+    // Wait a bit for any potential reactions
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Take another screenshot after action
+    const afterScreenshot = await captureScreenshot();
+    
+    return { 
+        success: true, 
+        message: `Entered "${text}" into field "${field}"`,
+        beforeScreenshot,
+        afterScreenshot
+    };
+}
+
+// Handle simple input command (just type text into active/focused element)
+async function handleSimpleInputCommand(text, tabId, beforeScreenshot) {
+    console.log(`Executing simple input with text: "${text}"`);
+    
+    // Execute input directly in the page
+    const result = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (text) => {
+            console.log(`Typing text: "${text}"`);
+            
+            // Get the active element
+            const activeElement = document.activeElement;
+            
+            // Check if the active element is an input field
+            const isInputField = (
+                activeElement.tagName === 'INPUT' || 
+                activeElement.tagName === 'TEXTAREA' || 
+                activeElement.getAttribute('contenteditable') === 'true' ||
+                activeElement.getAttribute('role') === 'textbox' ||
+                activeElement.getAttribute('role') === 'searchbox' ||
+                activeElement.getAttribute('role') === 'combobox'
+            );
+            
+            if (isInputField) {
+                console.log('Found active input field:', activeElement);
+                
+                // Highlight the field
+                const originalBg = activeElement.style.backgroundColor;
+                const originalOutline = activeElement.style.outline;
+                
+                activeElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                activeElement.style.outline = '2px solid yellow';
+                
+                // Enter text based on element type
+                if (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') {
+                    // For standard input elements
+                    activeElement.value = text;
+                    
+                    // Trigger input and change events
+                    activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                    activeElement.dispatchEvent(new Event('change', { bubbles: true }));
+                } else if (activeElement.getAttribute('contenteditable') === 'true') {
+                    // For contenteditable elements
+                    activeElement.textContent = text;
+                    
+                    // Trigger input event
+                    activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                
+                // Reset styles after a delay
+                setTimeout(() => {
+                    activeElement.style.backgroundColor = originalBg;
+                    activeElement.style.outline = originalOutline;
+                }, 1000);
+                
+                return true;
+            } else {
+                // If no active input field, try to find the first visible input field
+                const inputElements = Array.from(document.querySelectorAll(
+                    'input:not([type="submit"]):not([type="button"]):not([type="reset"]), ' +
+                    'textarea, [contenteditable="true"], ' +
+                    '[role="textbox"], [role="searchbox"], [role="combobox"]'
+                ));
+                
+                // Filter for visible elements
+                const visibleInputs = inputElements.filter(el => {
+                    const rect = el.getBoundingClientRect();
+                    return (
+                        rect.width > 0 &&
+                        rect.height > 0 &&
+                        window.getComputedStyle(el).display !== 'none' &&
+                        window.getComputedStyle(el).visibility !== 'hidden'
+                    );
+                });
+                
+                if (visibleInputs.length > 0) {
+                    const firstInput = visibleInputs[0];
+                    console.log('Found first visible input field:', firstInput);
+                    
+                    // Highlight the field
+                    const originalBg = firstInput.style.backgroundColor;
+                    const originalOutline = firstInput.style.outline;
+                    
+                    firstInput.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                    firstInput.style.outline = '2px solid yellow';
+                    
+                    // Scroll field into view
+                    firstInput.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                    
+                    // Focus the field
+                    firstInput.focus();
+                    
+                    // Clear existing value if any
+                    if (firstInput.tagName === 'INPUT' || firstInput.tagName === 'TEXTAREA') {
+                        firstInput.value = '';
+                    } else if (firstInput.getAttribute('contenteditable') === 'true') {
+                        firstInput.textContent = '';
+                    }
+                    
+                    // Enter text based on element type
+                    if (firstInput.tagName === 'INPUT' || firstInput.tagName === 'TEXTAREA') {
+                        // For standard input elements
+                        firstInput.value = text;
+                        
+                        // Trigger input and change events
+                        firstInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        firstInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else if (firstInput.getAttribute('contenteditable') === 'true') {
+                        // For contenteditable elements
+                        firstInput.textContent = text;
+                        
+                        // Trigger input event
+                        firstInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    
+                    // Reset styles after a delay
+                    setTimeout(() => {
+                        firstInput.style.backgroundColor = originalBg;
+                        firstInput.style.outline = originalOutline;
+                    }, 1000);
+                    
+                    return true;
+                } else {
+                    console.error('No input field found to type into');
+                    return false;
+                }
+            }
+        },
+        args: [text]
+    });
+    
+    // Wait a bit for any potential reactions
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Take another screenshot after action
+    const afterScreenshot = await captureScreenshot();
+    
+    return { 
+        success: true, 
+        message: `Typed "${text}"`,
         beforeScreenshot,
         afterScreenshot
     };

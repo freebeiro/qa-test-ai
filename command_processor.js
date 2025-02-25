@@ -65,6 +65,25 @@ export class CommandProcessor {
                     text: match[1].trim()
                 })
             },
+            // Input/Type commands
+            {
+                type: 'input',
+                pattern: /^(?:type|input|enter|fill|write)\s+(?:in|into)?\s*(?:the\s+)?(?:field|input|form|box|textarea)?\s*(?:with|labeled|named)?\s*["']?([^"']+)["']?\s+(?:with|as)?\s+["']?(.+?)["']?$/i,
+                handler: (match) => ({
+                    type: 'input',
+                    field: match[1].trim(),
+                    text: match[2].trim()
+                })
+            },
+            // Simple input command (just type text)
+            {
+                type: 'input_simple',
+                pattern: /^(?:type|input|enter|fill|write)\s+["']?(.+?)["']?$/i,
+                handler: (match) => ({
+                    type: 'input',
+                    text: match[1].trim()
+                })
+            },
             // Back command
             {
                 type: 'back',
