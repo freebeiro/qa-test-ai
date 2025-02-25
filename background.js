@@ -1,3 +1,5 @@
+// QA Testing Assistant Background Script
+
 // State tracking
 let browserTabId = null;
 let qaWindow = null;
@@ -206,6 +208,59 @@ async function handleClickCommand(text, tabId, beforeScreenshot) {
                         }
                     } catch (e) {
                         // Invalid selector, continue
+                    }
+                }
+            }
+            
+            // Look specifically for the top menu items if the text is likely to be a menu item
+            if (!elementToClick && ['blog', 'as nossas marcas', 'moda', 'login', 'menu'].includes(text.toLowerCase())) {
+                console.log('Looking specifically for menu items');
+                
+                // Look for menu items with more specific selectors
+                const menuSelectors = [
+                    // Generic menu items
+                    'nav a', 'header a', '.main-menu a', '.navigation a', '.menu a', '.top-menu a',
+                    // Menu items with text
+                    'a', 'button', '[role="button"]',
+                    // Specific to Worten site
+                    '.worten-header a', '.worten-menu a',
+                    // By href attributes
+                    `a[href*="${text.toLowerCase()}"]`,
+                    `a[href*="${text.toLowerCase().replace(/\s+/g, '-')}"]`,
+                    `a[href*="${text.toLowerCase().replace(/\s+/g, '')}"]`,
+                    // Broader but still targeted
+                    'nav li', 'header li', '.main-navigation li'
+                ];
+                
+                let potentialMenuItems = [];
+                
+                for (const selector of menuSelectors) {
+                    try {
+                        // Use document.querySelectorAll to get a list of elements
+                        const menuElements = document.querySelectorAll(selector);
+                        
+                        if (menuElements.length > 0) {
+                            console.log(`Found ${menuElements.length} potential menu items with selector: ${selector}`);
+                            potentialMenuItems = [...potentialMenuItems, ...Array.from(menuElements)];
+                        }
+                    } catch (e) {
+                        // Some selectors might not be valid, ignore errors
+                    }
+                }
+                
+                // Filter for items containing the text
+                if (potentialMenuItems.length > 0) {
+                    // Try to find a menu item that contains the text
+                    elementToClick = potentialMenuItems.find(item => {
+                        return (
+                            item.textContent.toLowerCase().includes(text.toLowerCase()) ||
+                            (item.getAttribute('href') && 
+                             item.getAttribute('href').toLowerCase().includes(text.toLowerCase()))
+                        );
+                    });
+                    
+                    if (elementToClick) {
+                        console.log('Found menu item with text:', elementToClick);
                     }
                 }
             }

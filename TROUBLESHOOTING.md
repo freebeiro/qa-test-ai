@@ -1,6 +1,56 @@
 ## Common Extension Issues
 
-### 1. Click Commands Not Working
+### 1. Service Worker Registration Failures
+
+#### Symptoms
+- Error message in console: "Service worker registration failed. Status code: 15"
+- Extension not initializing properly
+- Commands not being processed
+- Extension icon not responding to clicks
+
+#### Solutions
+- Ensure the background.js file is properly structured with no syntax errors
+- Check for misplaced code fragments or undefined variable references
+- Verify that the manifest.json correctly references the background script
+- Rebuild the extension to ensure proper bundling:
+  ```bash
+  npm run build
+  ```
+- Reload the extension in Chrome/Brave's extension management page
+
+### 2. Reference Errors in Background Script
+
+#### Symptoms
+- Error message in console: "Uncaught ReferenceError: elementToClick is not defined"
+- Extension functionality breaking
+- Service worker failing to initialize properly
+- Commands not being processed
+
+#### Solutions
+- Check for proper variable declarations and scope in background.js
+- Ensure all variables are defined before they are used
+- Look for code fragments that might be misplaced
+- Properly organize the background script with clear sections:
+  ```javascript
+  // QA Testing Assistant Background Script
+  
+  // State tracking variables
+  let browserTabId = null;
+  let qaWindow = null;
+  
+  // Function definitions
+  function handleCommand() {
+    // Implementation
+  }
+  
+  // Event listeners
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Message handling
+  });
+  ```
+- Rebuild and reload the extension after making changes
+
+### 3. Click Commands Not Working
 
 #### Symptoms
 - Click commands like "click Blog" are recognized but nothing happens

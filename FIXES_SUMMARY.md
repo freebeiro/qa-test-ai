@@ -158,6 +158,46 @@ The QA Testing Assistant now:
 4. Recovers from extension context invalidation
 5. Properly validates URLs for command execution
 
+### 6. Service Worker Registration Fix
+
+- **Problem**: Service worker registration was failing with "Status code: 15" error due to corrupted background.js file
+- **Solution**: Completely rewrote the background.js file with proper organization and structure
+- **Benefits**:
+  - Successful service worker registration
+  - Elimination of "elementToClick is not defined" reference errors
+  - Proper initialization of extension functionality
+  - More maintainable code structure
+
+## Implementation Details
+
+### Background Script Reorganization
+
+The background script was reorganized to ensure proper variable and function definitions:
+
+```javascript
+// QA Testing Assistant Background Script
+
+// State tracking
+let browserTabId = null;
+let qaWindow = null;
+let activePort = null;
+
+// Track controlled tabs
+const controlledTabs = new Set();
+
+// Message handler
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Message handling code
+});
+
+// Function definitions
+async function handleCommand(command, tabId) {
+    // Command handling logic
+}
+
+// Other function definitions...
+```
+
 ## Next Steps
 
 While the current fixes address the major issues, future improvements could include:
@@ -167,6 +207,7 @@ While the current fixes address the major issues, future improvements could incl
 3. Support for additional command types
 4. Improved error reporting and logging
 5. Better integration with testing frameworks
+6. Additional error handling for service worker registration
 
 ## Conclusion
 
