@@ -33,9 +33,8 @@ module.exports = {
         { from: 'styles.css', to: '.' },
         { from: 'icons', to: 'icons' },
         { from: '.env', to: '.env' },
-        // Include the new utility files
-        { from: 'super_click.js', to: '.' },
-        { from: 'direct_execution_commands.js', to: '.' }
+        // Include the utility files
+        { from: 'super_click.js', to: '.' }
       ],
     }),
   ],
