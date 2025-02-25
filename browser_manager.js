@@ -1,3 +1,5 @@
+import { UrlHelper } from './url_helper.js';
+
 export class BrowserTabManager {
     constructor() {
         this.tabId = null;
@@ -33,11 +35,10 @@ export class BrowserTabManager {
     }
 
     isInternalUrl(url) {
-        if (!url) return true;
-        return url.startsWith('chrome://') || 
-               url.startsWith('chrome-extension://') || 
-               url.startsWith('brave://') ||
-               url.startsWith('devtools://');
+        console.log(`Browser Manager checking URL: ${url}`);
+        const result = UrlHelper.isInternalUrl(url);
+        console.log(`Is internal URL? ${result}`);
+        return result;
     }
 
     async createNewTab() {
@@ -63,13 +64,19 @@ export class BrowserTabManager {
     }
 
     async navigate(url) {
+        console.log(`Navigation requested to: ${url}`);
         try {
+            console.log('Ensuring tab is active before navigation');
             await this.ensureTabActive();
+            console.log('Tab activation complete');
             
             // Process the URL
-            let processedUrl = url.toLowerCase().trim();
-            if (!processedUrl.match(/^https?:\/\//)) {
-                processedUrl = `https://${processedUrl}`;
+            let processedUrl = UrlHelper.normalizeUrl(url);
+            console.log(`Normalized URL: ${processedUrl}`);
+            
+            if (!UrlHelper.isValidExternalUrl(processedUrl)) {
+                console.error(`Invalid URL detected: ${processedUrl}`);
+                throw new Error('Invalid or unsupported URL format');
             }
             
             console.log(`Navigating to: ${processedUrl}`);
@@ -111,6 +118,8 @@ export class BrowserTabManager {
     }
 
     async ensureTabActive() {
+        console.log('Ensuring tab is active with tabId:', this.tabId, 'windowId:', this.windowId);
+        
         if (!this.tabId || !this.windowId) {
             console.log('No active tab, creating new one...');
             await this.createNewTab();
@@ -120,10 +129,14 @@ export class BrowserTabManager {
         try {
             // Check if the current tab is valid
             const tab = await chrome.tabs.get(this.tabId);
+            console.log(`Current tab URL: ${tab.url}`);
+            
             if (this.isInternalUrl(tab.url)) {
                 console.log('Current tab is internal, creating new one...');
                 await this.createNewTab();
                 return;
+            } else {
+                console.log('Current tab is valid external URL');
             }
             
             await chrome.windows.update(this.windowId, { focused: true });
@@ -139,18 +152,44 @@ export class BrowserTabManager {
         try {
             await this.ensureTabActive();
             
-            // Check if we can capture screenshot
+            // Verify window focus and tab state
             const tab = await chrome.tabs.get(this.tabId);
             if (this.isInternalUrl(tab.url)) {
                 console.log('Cannot capture screenshot of internal page');
                 return null;
             }
+
+            // Ensure window is focused
+            await chrome.windows.update(this.windowId, { focused: true });
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait for focus
+
+            // Implement exponential backoff retry
+            const maxRetries = 3;
+            const baseDelay = 1000; // 1 second
             
-            const result = await chrome.tabs.captureVisibleTab(this.windowId, {
-                format: 'png',
-                quality: 100
-            });
-            return result;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const result = await chrome.tabs.captureVisibleTab(this.windowId, {
+                        format: 'png',
+                        quality: 100
+                    });
+                    
+                    if (result) {
+                        return result;
+                    }
+                } catch (error) {
+                    if (error.message.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND')) {
+                        const delay = baseDelay * Math.pow(2, attempt);
+                        console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    throw error; // Rethrow other errors
+                }
+            }
+            
+            console.error('❌ Screenshot capture failed after max retries');
+            return null;
         } catch (error) {
             console.error('❌ Screenshot capture failed:', error);
             return null;

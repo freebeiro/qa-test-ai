@@ -2,18 +2,18 @@
 
 ## [Unreleased]
 ### Added
-- Enhanced cursor management system with improved visibility and persistence
-- Comprehensive cursor troubleshooting documentation
-- Smooth cursor movement with cubic bezier animations
-- Periodic visibility checks and auto-recovery system
-- Enhanced browser window management with better error handling
-- New documentation files (PROJECT_STRUCTURE.md, TROUBLESHOOTING.md)
-- Improved content script integration
-- UI testing framework with Playwright integration
-- Support for running tests against existing Brave browser session
-- Debug server for capturing extension logs
-- Test scenarios for basic navigation, vision testing, and complex interactions
-- Browser connection handling and extension popup automation
+- Direct command execution mode that doesn't require Playwright service
+- Robust element finder with multiple click strategies
+- Reconnection logic for handling extension context invalidation
+- Support for back, forward, and refresh browser commands
+- Improved URL validation logic
+
+### Fixed
+- Fixed issue where clicks were not working properly on some elements
+- Fixed "Extension context invalidated" errors with reconnection logic
+- Fixed URL validation to correctly identify external websites
+- Fixed navigation commands like "back" and "forward"
+- Improved error handling and logging
 
 ### Changed
 - Enhanced z-index management for reliable cursor display
@@ -25,6 +25,7 @@
 - Enhanced error handling and logging
 
 ### Removed
+- Dependency on WebSocket connection to Playwright service
 - Unused proxy and playwright services
 - Legacy scripts and commands
 - Redundant build scripts

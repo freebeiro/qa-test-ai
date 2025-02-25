@@ -2,16 +2,14 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  mode: 'development',  // Changed to development for better debugging
   entry: {
     popup: './popup.js',
     background: './background.js',
     content: './content.js'
   },
   output: {
-    path: path.resolve(__dirname, 'dist'),
     filename: '[name].bundle.js',
-    clean: true
+    path: path.resolve(__dirname, 'dist'),
   },
   module: {
     rules: [
@@ -21,13 +19,7 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: [
-              ['@babel/preset-env', {
-                targets: {
-                  chrome: "88"
-                }
-              }]
-            ]
+            presets: ['@babel/preset-env']
           }
         }
       }
@@ -36,24 +28,15 @@ module.exports = {
   plugins: [
     new CopyPlugin({
       patterns: [
-        { from: "manifest.json", to: "manifest.json" },
-        { from: "popup.html", to: "popup.html" },
-        { from: "icons", to: "icons" },
-        { from: ".env", to: ".env" },
-        { from: "styles.css", to: "styles.css", noErrorOnMissing: true }
+        { from: 'manifest.json', to: '.' },
+        { from: 'popup.html', to: '.' },
+        { from: 'styles.css', to: '.' },
+        { from: 'icons', to: 'icons' },
+        { from: '.env', to: '.env' },
+        // Include the new utility files
+        { from: 'super_click.js', to: '.' },
+        { from: 'direct_execution_commands.js', to: '.' }
       ],
     }),
   ],
-  watchOptions: {
-    ignored: /node_modules/,
-    poll: 1000
-  },
-  resolve: {
-    extensions: ['.js'],
-    fallback: {}
-  },
-  optimization: {
-    minimize: false
-  },
-  devtool: 'source-map'  // Added for better debugging
 };

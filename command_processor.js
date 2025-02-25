@@ -1,5 +1,3 @@
-import { TestVisionCommand, LocateCommand } from './vision_commands.js';
-
 export class CommandProcessor {
     constructor(browserTab) {
         this.browserTab = browserTab;
@@ -11,40 +9,11 @@ export class CommandProcessor {
         console.log('Processing command:', command);
 
         try {
-            // First try to parse as a standard command
+            // Parse as a standard command
             const commandObj = this.parseCommand(command);
             if (commandObj) {
                 console.log('Command parsed as:', commandObj);
                 return commandObj;
-            }
-
-            // Then try to parse as a locate command
-            const findMatch = command.match(/^find\s+(.+)$/i);
-            if (findMatch) {
-                const query = findMatch[1];
-                
-                // Match "find Nth item in Section"
-                const itemInSectionMatch = query.match(/(\d+)(?:st|nd|rd|th)?\s+item\s+in\s+(.+)/i);
-                if (itemInSectionMatch) {
-                    return new LocateCommand(this.browserTab, {
-                        section: itemInSectionMatch[2],
-                        itemIndex: parseInt(itemInSectionMatch[1])
-                    });
-                }
-
-                // Match "find tab/button/link Text"
-                const elementTypeMatch = query.match(/^(tab|button|link)\s+(.+)/i);
-                if (elementTypeMatch) {
-                    return new LocateCommand(this.browserTab, {
-                        text: elementTypeMatch[2],
-                        type: elementTypeMatch[1]
-                    });
-                }
-
-                // Default to simple text search
-                return new LocateCommand(this.browserTab, {
-                    text: query
-                });
             }
 
             throw new Error('Unknown command');
@@ -68,6 +37,15 @@ export class CommandProcessor {
                     y: parseInt(match[2])
                 })
             },
+            // Click command
+            {
+                type: 'click',
+                pattern: /^click\s+(.+)$/i,
+                handler: (match) => ({
+                    type: 'click',
+                    text: match[1].trim()
+                })
+            },
             // Navigation commands
             {
                 type: 'navigation',
@@ -78,20 +56,31 @@ export class CommandProcessor {
                     skipFirstResult: false
                 })
             },
-            // Basic browser commands
+            // Search commands
+            {
+                type: 'search',
+                pattern: /^(?:search|find text)\s+(.+)$/i,
+                handler: (match) => ({
+                    type: 'search',
+                    text: match[1].trim()
+                })
+            },
+            // Back command
             {
                 type: 'back',
-                pattern: /^back$/i,
+                pattern: /^(?:go\s+)?back$/i,
                 handler: () => ({ type: 'back' })
             },
+            // Forward command
             {
                 type: 'forward',
-                pattern: /^forward$/i,
+                pattern: /^(?:go\s+)?forward$/i,
                 handler: () => ({ type: 'forward' })
             },
+            // Refresh command
             {
                 type: 'refresh',
-                pattern: /^refresh$/i,
+                pattern: /^(?:refresh|reload)$/i,
                 handler: () => ({ type: 'refresh' })
             }
         ];

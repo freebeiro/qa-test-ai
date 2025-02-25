@@ -1,3 +1,114 @@
+## Common Extension Issues
+
+### 1. Click Commands Not Working
+
+#### Symptoms
+- Click commands like "click Blog" are recognized but nothing happens
+- Elements are highlighted but not actually clicked
+- Navigation fails after click attempts
+
+#### Solutions
+- We've implemented a multi-strategy click approach that tries several methods:
+  ```javascript
+  // Try multiple click methods in sequence
+  try {
+      // Method 1: Direct click
+      elementToClick.click();
+  } catch (e) {
+      try {
+          // Method 2: MouseEvent
+          const clickEvent = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+          });
+          elementToClick.dispatchEvent(clickEvent);
+      } catch (e2) {
+          try {
+              // Method 3: Programmatic href navigation for links
+              if (elementToClick.tagName === 'A' && elementToClick.href) {
+                  window.location.href = elementToClick.href;
+              }
+          } catch (e3) {
+              // All methods failed
+          }
+      }
+  }
+  ```
+
+### 2. "Extension context invalidated" Errors
+
+#### Symptoms
+- Error message in console: "Uncaught Error: Extension context invalidated"
+- Commands stop working after some time
+- Heartbeat failures in console logs
+
+#### Solutions
+- Added reconnection logic to handle context invalidation:
+  ```javascript
+  function handleExtensionContextInvalidated() {
+      if (reconnectionAttempts < MAX_RECONNECTION_ATTEMPTS) {
+          reconnectionAttempts++;
+          // Attempt to re-establish connection
+          chrome.runtime.sendMessage({ type: 'PING' }, (response) => {
+              if (!chrome.runtime.lastError) {
+                  reconnectionAttempts = 0;
+                  isControlledTab = true;
+                  startHeartbeat();
+              } else {
+                  setTimeout(handleExtensionContextInvalidated, 1000);
+              }
+          });
+      }
+  }
+  ```
+
+### 3. WebSocket Connection Errors
+
+#### Symptoms
+- Error: "Could not establish connection. Receiving end does not exist."
+- Commands fail when Playwright service is not running
+- Extension shows connection failures in console
+
+#### Solutions
+- Implemented direct execution mode that doesn't require Playwright service
+- All commands now run directly in the browser context
+- Element finding, clicking, and navigation handled directly in content script
+
+### 4. Navigation Command Issues
+
+#### Symptoms
+- "back" command navigating to a URL called "back" instead of going back in history
+- "forward" command not working
+- Special navigation commands being misinterpreted
+
+#### Solutions
+- Fixed command parsing to properly handle special navigation commands:
+  ```javascript
+  // Handle different command types
+  switch (command.type) {
+      case 'back':
+          return await handleBackCommand(tabId, beforeScreenshot);
+      case 'forward':
+          return await handleForwardCommand(tabId, beforeScreenshot);
+      case 'refresh':
+          return await handleRefreshCommand(tabId, beforeScreenshot);
+  }
+  ```
+- Special handling for "go back" and similar phrasings
+
+### 5. URL Validation Issues
+
+#### Symptoms
+- Extension incorrectly identifies regular websites as "internal"
+- Error: "Cannot execute commands on internal browser pages"
+- URL validation fails on standard websites
+
+#### Solutions
+- Fixed URL validation logic to properly identify external URLs
+- Improved protocol handling and validation
+- Added extensive logging for URL validation steps
+
 # Troubleshooting Guide
 
 ## Service Management
