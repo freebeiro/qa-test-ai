@@ -126,6 +126,9 @@ async function handleCommand(command, tabId) {
                     return await handleSimpleInputCommand(command.text, tabId, beforeScreenshot);
                 }
                 
+            case 'press_enter':
+                return await handlePressEnterCommand(tabId, beforeScreenshot);
+                
             case 'ensure_cursor':
                 await injectCursor(tabId);
                 return { success: true, message: 'Cursor injected successfully' };
@@ -739,6 +742,262 @@ async function handleInputCommand(field, text, tabId, beforeScreenshot) {
     return { 
         success: true, 
         message: `Entered "${text}" into field "${field}"`,
+        beforeScreenshot,
+        afterScreenshot
+    };
+}
+
+// Handle press Enter command
+async function handlePressEnterCommand(tabId, beforeScreenshot) {
+    console.log('Executing press Enter command');
+    
+    // Execute press Enter directly in the page
+    const result = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+            console.log('Pressing Enter key');
+            
+            // Get the active element
+            const activeElement = document.activeElement;
+            
+            // Check if the active element is an input field
+            const isInputField = (
+                activeElement.tagName === 'INPUT' || 
+                activeElement.tagName === 'TEXTAREA' || 
+                activeElement.getAttribute('contenteditable') === 'true' ||
+                activeElement.getAttribute('role') === 'textbox' ||
+                activeElement.getAttribute('role') === 'searchbox' ||
+                activeElement.getAttribute('role') === 'combobox'
+            );
+            
+            if (isInputField) {
+                console.log('Found active input field for Enter key:', activeElement);
+                
+                // Highlight the field
+                const originalBg = activeElement.style.backgroundColor;
+                const originalOutline = activeElement.style.outline;
+                
+                activeElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                activeElement.style.outline = '2px solid yellow';
+                
+                // Create and dispatch keydown event
+                const keydownEvent = new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true
+                });
+                activeElement.dispatchEvent(keydownEvent);
+                
+                // Create and dispatch keypress event
+                const keypressEvent = new KeyboardEvent('keypress', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true
+                });
+                activeElement.dispatchEvent(keypressEvent);
+                
+                // Create and dispatch keyup event
+                const keyupEvent = new KeyboardEvent('keyup', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true
+                });
+                activeElement.dispatchEvent(keyupEvent);
+                
+                // If it's a form input, try to submit the form
+                let form = activeElement.form;
+                if (!form) {
+                    // Try to find parent form
+                    let parent = activeElement.parentElement;
+                    while (parent && !form) {
+                        if (parent.tagName === 'FORM') {
+                            form = parent;
+                            break;
+                        }
+                        parent = parent.parentElement;
+                    }
+                }
+                
+                if (form) {
+                    console.log('Found form, attempting to submit');
+                    try {
+                        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                        form.submit();
+                    } catch (e) {
+                        console.error('Form submission failed:', e);
+                    }
+                }
+                
+                // Reset styles after a delay
+                setTimeout(() => {
+                    activeElement.style.backgroundColor = originalBg;
+                    activeElement.style.outline = originalOutline;
+                }, 1000);
+                
+                return true;
+            } else {
+                // If no active input field, try to find the first visible input field
+                const inputElements = Array.from(document.querySelectorAll(
+                    'input:not([type="submit"]):not([type="button"]):not([type="reset"]), ' +
+                    'textarea, [contenteditable="true"], ' +
+                    '[role="textbox"], [role="searchbox"], [role="combobox"]'
+                ));
+                
+                // Filter for visible elements
+                const visibleInputs = inputElements.filter(el => {
+                    const rect = el.getBoundingClientRect();
+                    return (
+                        rect.width > 0 &&
+                        rect.height > 0 &&
+                        window.getComputedStyle(el).display !== 'none' &&
+                        window.getComputedStyle(el).visibility !== 'hidden'
+                    );
+                });
+                
+                if (visibleInputs.length > 0) {
+                    const firstInput = visibleInputs[0];
+                    console.log('Found first visible input field for Enter key:', firstInput);
+                    
+                    // Highlight the field
+                    const originalBg = firstInput.style.backgroundColor;
+                    const originalOutline = firstInput.style.outline;
+                    
+                    firstInput.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                    firstInput.style.outline = '2px solid yellow';
+                    
+                    // Scroll field into view
+                    firstInput.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                    
+                    // Focus the field
+                    firstInput.focus();
+                    
+                    // Create and dispatch keydown event
+                    const keydownEvent = new KeyboardEvent('keydown', {
+                        key: 'Enter',
+                        code: 'Enter',
+                        keyCode: 13,
+                        which: 13,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    firstInput.dispatchEvent(keydownEvent);
+                    
+                    // Create and dispatch keypress event
+                    const keypressEvent = new KeyboardEvent('keypress', {
+                        key: 'Enter',
+                        code: 'Enter',
+                        keyCode: 13,
+                        which: 13,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    firstInput.dispatchEvent(keypressEvent);
+                    
+                    // Create and dispatch keyup event
+                    const keyupEvent = new KeyboardEvent('keyup', {
+                        key: 'Enter',
+                        code: 'Enter',
+                        keyCode: 13,
+                        which: 13,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    firstInput.dispatchEvent(keyupEvent);
+                    
+                    // If it's a form input, try to submit the form
+                    let form = firstInput.form;
+                    if (!form) {
+                        // Try to find parent form
+                        let parent = firstInput.parentElement;
+                        while (parent && !form) {
+                            if (parent.tagName === 'FORM') {
+                                form = parent;
+                                break;
+                            }
+                            parent = parent.parentElement;
+                        }
+                    }
+                    
+                    if (form) {
+                        console.log('Found form, attempting to submit');
+                        try {
+                            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                            form.submit();
+                        } catch (e) {
+                            console.error('Form submission failed:', e);
+                        }
+                    }
+                    
+                    // Reset styles after a delay
+                    setTimeout(() => {
+                        firstInput.style.backgroundColor = originalBg;
+                        firstInput.style.outline = originalOutline;
+                    }, 1000);
+                    
+                    return true;
+                } else {
+                    console.error('No input field found to press Enter on');
+                    
+                    // As a last resort, try to dispatch Enter key to document
+                    try {
+                        document.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true,
+                            cancelable: true
+                        }));
+                        
+                        document.dispatchEvent(new KeyboardEvent('keypress', {
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true,
+                            cancelable: true
+                        }));
+                        
+                        document.dispatchEvent(new KeyboardEvent('keyup', {
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true,
+                            cancelable: true
+                        }));
+                        
+                        return true;
+                    } catch (e) {
+                        console.error('Document Enter key dispatch failed:', e);
+                        return false;
+                    }
+                }
+            }
+        }
+    });
+    
+    // Wait a bit for any potential reactions or form submissions
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Take another screenshot after action
+    const afterScreenshot = await captureScreenshot();
+    
+    return { 
+        success: true, 
+        message: 'Pressed Enter key',
         beforeScreenshot,
         afterScreenshot
     };

@@ -84,6 +84,14 @@ export class CommandProcessor {
                     text: match[1].trim()
                 })
             },
+            // Press Enter command
+            {
+                type: 'press_enter',
+                pattern: /^(?:press\s+enter|hit\s+enter|submit|enter)$/i,
+                handler: () => ({
+                    type: 'press_enter'
+                })
+            },
             // Back command
             {
                 type: 'back',
