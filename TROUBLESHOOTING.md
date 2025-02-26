@@ -241,6 +241,55 @@
   - If no active element, find and focus first input
   - As last resort, dispatch Enter to document
 
+### 8. Element Selection Ambiguity Issues
+
+#### Symptoms
+- Clicking on wrong elements when multiple similar elements exist
+- Unable to target specific items in lists or grids
+- Difficulty interacting with specific UI components
+- Inconsistent behavior when clicking on elements with similar text
+
+#### Solutions
+- Implemented ordinal click commands for precise element targeting:
+  ```javascript
+  // Ordinal click command pattern
+  {
+      type: 'ordinal_click',
+      pattern: /^click\s+(first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|last|[0-9]+(?:st|nd|rd|th)?)\s+(.+)$/i,
+      handler: (match) => {
+          // Convert ordinal text to position number
+          // ...
+          return {
+              type: 'ordinal_click',
+              position: positionNumber,
+              elementType: match[2].trim()
+          };
+      }
+  }
+  ```
+- Comprehensive element type recognition system:
+  ```javascript
+  // Element type selectors
+  const typeSelectors = {
+      // Navigation elements
+      'tab': 'a[role="tab"], [role="tab"], .tab, .nav-item, .nav-link, [data-toggle="tab"]',
+      'menu': 'nav a, .menu a, .menu-item, [role="menuitem"], .dropdown-item',
+      // Content elements
+      'result': '.result, .search-result, .item, article, .product, .card',
+      'item': '.item, article, .product, .card, li',
+      // UI components
+      'button': 'button, [role="button"], .btn, input[type="button"], input[type="submit"]',
+      // Location-based elements
+      'left menu': '.left-menu, .sidebar-left, .left-sidebar, .left-nav',
+      // ... many more element types
+  };
+  ```
+- Smart element finding with multiple strategies:
+  - Predefined CSS selectors for common element types
+  - Attribute-based selectors as fallback
+  - Visibility filtering to ensure elements are actually clickable
+  - Proper scrolling and highlighting of selected elements
+
 # Troubleshooting Guide
 
 ## Service Management

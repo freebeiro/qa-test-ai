@@ -37,7 +37,43 @@ export class CommandProcessor {
                     y: parseInt(match[2])
                 })
             },
-            // Click command
+            // Ordinal click command (click first/second/third/etc. item/result/tab/etc.)
+            {
+                type: 'ordinal_click',
+                pattern: /^click\s+(first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|last|[0-9]+(?:st|nd|rd|th)?)\s+(.+)$/i,
+                handler: (match) => {
+                    // Convert ordinal text to number
+                    let position = match[1].toLowerCase();
+                    let positionNumber = 0;
+                    
+                    if (position === 'first' || position === '1st') {
+                        positionNumber = 0; // Zero-based index
+                    } else if (position === 'second' || position === '2nd') {
+                        positionNumber = 1;
+                    } else if (position === 'third' || position === '3rd') {
+                        positionNumber = 2;
+                    } else if (position === 'fourth' || position === '4th') {
+                        positionNumber = 3;
+                    } else if (position === 'fifth' || position === '5th') {
+                        positionNumber = 4;
+                    } else if (position === 'last') {
+                        positionNumber = -1; // Special value for last item
+                    } else {
+                        // Extract number from string like "1st", "2nd", etc.
+                        const num = parseInt(position);
+                        if (!isNaN(num)) {
+                            positionNumber = num - 1; // Convert to zero-based index
+                        }
+                    }
+                    
+                    return {
+                        type: 'ordinal_click',
+                        position: positionNumber,
+                        elementType: match[2].trim()
+                    };
+                }
+            },
+            // Standard click command
             {
                 type: 'click',
                 pattern: /^click\s+(.+)$/i,

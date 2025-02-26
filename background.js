@@ -93,6 +93,9 @@ async function handleCommand(command, tabId) {
             case 'click':
                 return await handleClickCommand(command.text, tabId, beforeScreenshot);
                 
+            case 'ordinal_click':
+                return await handleOrdinalClickCommand(command.position, command.elementType, tabId, beforeScreenshot);
+                
             case 'navigation':
                 // Check if this is a navigation to a special URL like 'back'
                 if (['back', 'forward', 'refresh', 'reload'].includes(command.url.toLowerCase())) {
@@ -998,6 +1001,255 @@ async function handlePressEnterCommand(tabId, beforeScreenshot) {
     return { 
         success: true, 
         message: 'Pressed Enter key',
+        beforeScreenshot,
+        afterScreenshot
+    };
+}
+
+// Handle ordinal click command (click first/second/third/etc. item/result/tab/etc.)
+async function handleOrdinalClickCommand(position, elementType, tabId, beforeScreenshot) {
+    console.log(`Executing ordinal click for position ${position} and type "${elementType}"`);
+    
+    // Execute ordinal click directly in the page
+    const result = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (position, elementType) => {
+            console.log(`Looking for elements of type "${elementType}" at position ${position}`);
+            
+            // Helper function to get element text content considering aria-label, title, etc.
+            function getElementText(element) {
+                const content = element.textContent?.trim() || '';
+                const ariaLabel = element.getAttribute('aria-label')?.trim() || '';
+                const title = element.getAttribute('title')?.trim() || '';
+                const alt = element.getAttribute('alt')?.trim() || '';
+                const value = element.value || '';
+                
+                return [content, ariaLabel, title, alt, value].filter(Boolean).join(' ');
+            }
+            
+            // Helper function to get elements by type
+            function getElementsByType(type) {
+                const typeLower = type.toLowerCase();
+                let elements = [];
+                
+                // Common element types and their selectors
+                const typeSelectors = {
+                    // Navigation elements
+                    'tab': 'a[role="tab"], [role="tab"], .tab, .nav-item, .nav-link, [data-toggle="tab"]',
+                    'tabs': 'a[role="tab"], [role="tab"], .tab, .nav-item, .nav-link, [data-toggle="tab"]',
+                    'menu': 'nav a, .menu a, .menu-item, [role="menuitem"], .dropdown-item',
+                    'menu item': 'nav a, .menu a, .menu-item, [role="menuitem"], .dropdown-item',
+                    'navigation': 'nav a, header a, .navigation a, .nav a',
+                    'nav': 'nav a, header a, .navigation a, .nav a',
+                    'navbar': 'nav a, header a, .navbar a, .navbar-nav a',
+                    
+                    // Content elements
+                    'result': '.result, .search-result, .item, article, .product, .card',
+                    'results': '.result, .search-result, .item, article, .product, .card',
+                    'item': '.item, article, .product, .card, li',
+                    'items': '.item, article, .product, .card, li',
+                    'product': '.product, .item, .card, article',
+                    'products': '.product, .item, .card, article',
+                    'article': 'article, .article, .post, .blog-post',
+                    'articles': 'article, .article, .post, .blog-post',
+                    
+                    // UI components
+                    'button': 'button, [role="button"], .btn, input[type="button"], input[type="submit"]',
+                    'buttons': 'button, [role="button"], .btn, input[type="button"], input[type="submit"]',
+                    'link': 'a, [role="link"], .link',
+                    'links': 'a, [role="link"], .link',
+                    'image': 'img, [role="img"], .image, picture',
+                    'images': 'img, [role="img"], .image, picture',
+                    
+                    // E-commerce elements
+                    'cart': '.cart, .shopping-cart, [data-testid*="cart"]',
+                    'add to cart': '.add-to-cart, [data-testid*="add-to-cart"]',
+                    'checkout': '.checkout, [data-testid*="checkout"]',
+                    'filter': '.filter, [data-testid*="filter"], .facet',
+                    'filters': '.filter, [data-testid*="filter"], .facet',
+                    
+                    // Layout elements
+                    'carousel': '.carousel, .slider, .slideshow',
+                    'carousels': '.carousel, .slider, .slideshow',
+                    'slide': '.slide, .carousel-item, .slider-item',
+                    'slides': '.slide, .carousel-item, .slider-item',
+                    'card': '.card, .product-card, .item-card',
+                    'cards': '.card, .product-card, .item-card',
+                    
+                    // Location-based elements
+                    'left menu': '.left-menu, .sidebar-left, .left-sidebar, .left-nav',
+                    'right menu': '.right-menu, .sidebar-right, .right-sidebar, .right-nav',
+                    'top menu': '.top-menu, .top-nav, header nav, .main-nav',
+                    'bottom menu': '.bottom-menu, .bottom-nav, footer nav',
+                    'side menu': '.side-menu, .sidebar, .side-nav',
+                    'header': 'header, .header, .page-header',
+                    'footer': 'footer, .footer, .page-footer',
+                    'sidebar': '.sidebar, .side-menu, aside',
+                    
+                    // Generic fallback
+                    'element': '*',
+                    'elements': '*'
+                };
+                
+                // Try to find elements using predefined selectors
+                if (typeSelectors[typeLower]) {
+                    elements = Array.from(document.querySelectorAll(typeSelectors[typeLower]));
+                    console.log(`Found ${elements.length} elements using predefined selector for "${typeLower}"`);
+                }
+                
+                // If no elements found or no predefined selector, try to find elements containing the type in various attributes
+                if (elements.length === 0) {
+                    // Try to find elements with class, id, or role containing the type
+                    const attributeSelectors = [
+                        `[class*="${typeLower}"]`,
+                        `[id*="${typeLower}"]`,
+                        `[role*="${typeLower}"]`,
+                        `[data-testid*="${typeLower}"]`,
+                        `[aria-label*="${typeLower}"]`
+                    ];
+                    
+                    for (const selector of attributeSelectors) {
+                        try {
+                            const foundElements = document.querySelectorAll(selector);
+                            if (foundElements.length > 0) {
+                                elements = [...elements, ...Array.from(foundElements)];
+                                console.log(`Found ${foundElements.length} elements with selector: ${selector}`);
+                            }
+                        } catch (e) {
+                            // Invalid selector, continue
+                        }
+                    }
+                }
+                
+                // Filter for visible elements
+                elements = elements.filter(el => {
+                    const rect = el.getBoundingClientRect();
+                    return (
+                        rect.width > 0 &&
+                        rect.height > 0 &&
+                        window.getComputedStyle(el).display !== 'none' &&
+                        window.getComputedStyle(el).visibility !== 'hidden'
+                    );
+                });
+                
+                console.log(`Found ${elements.length} visible elements of type "${typeLower}"`);
+                return elements;
+            }
+            
+            // Get elements of the specified type
+            const elements = getElementsByType(elementType);
+            
+            if (elements.length === 0) {
+                console.error(`No elements found of type: ${elementType}`);
+                return false;
+            }
+            
+            // Determine which element to click based on position
+            let elementToClick = null;
+            
+            if (position === -1) {
+                // Special case for "last" position
+                elementToClick = elements[elements.length - 1];
+            } else if (position >= 0 && position < elements.length) {
+                elementToClick = elements[position];
+            } else {
+                console.error(`Invalid position ${position} for elements of type ${elementType} (found ${elements.length} elements)`);
+                return false;
+            }
+            
+            // If element found, click it directly using multiple methods
+            if (elementToClick) {
+                console.log('Found element to click:', elementToClick);
+                
+                // Highlight element
+                const originalBg = elementToClick.style.backgroundColor;
+                const originalOutline = elementToClick.style.outline;
+                
+                elementToClick.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+                elementToClick.style.outline = '2px solid red';
+                
+                // Scroll element into view
+                elementToClick.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                
+                // Try multiple click methods
+                try {
+                    // Method 1: Direct click
+                    elementToClick.click();
+                    console.log('Direct click success');
+                } catch (e) {
+                    console.error('Direct click failed:', e);
+                    
+                    try {
+                        // Method 2: MouseEvent
+                        const clickEvent = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        elementToClick.dispatchEvent(clickEvent);
+                        console.log('MouseEvent click success');
+                    } catch (e2) {
+                        console.error('MouseEvent click failed:', e2);
+                        
+                        try {
+                            // Method 3: Programmatic href navigation for links
+                            if (elementToClick.tagName === 'A' && elementToClick.href) {
+                                window.location.href = elementToClick.href;
+                                console.log('Href navigation success');
+                            } else {
+                                throw new Error('Element is not a link with href');
+                            }
+                        } catch (e3) {
+                            console.error('All click methods failed:', e3);
+                            return false;
+                        }
+                    }
+                }
+                
+                // Reset styles after a delay
+                setTimeout(() => {
+                    elementToClick.style.backgroundColor = originalBg;
+                    elementToClick.style.outline = originalOutline;
+                }, 1000);
+                
+                return true;
+            } else {
+                console.error(`No element found at position ${position} for type ${elementType}`);
+                return false;
+            }
+        },
+        args: [position, elementType]
+    });
+    
+    // Wait for any potential page changes
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Take another screenshot after action
+    const afterScreenshot = await captureScreenshot();
+    
+    // Get ordinal text for message
+    let ordinalText = '';
+    if (position === 0) {
+        ordinalText = 'first';
+    } else if (position === 1) {
+        ordinalText = 'second';
+    } else if (position === 2) {
+        ordinalText = 'third';
+    } else if (position === 3) {
+        ordinalText = 'fourth';
+    } else if (position === 4) {
+        ordinalText = 'fifth';
+    } else if (position === -1) {
+        ordinalText = 'last';
+    } else {
+        ordinalText = `${position + 1}th`;
+    }
+    
+    return { 
+        success: true, 
+        message: `Clicked on ${ordinalText} ${elementType}`,
         beforeScreenshot,
         afterScreenshot
     };
