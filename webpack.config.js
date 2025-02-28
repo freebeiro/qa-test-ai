@@ -31,10 +31,7 @@ module.exports = {
         { from: 'manifest.json', to: '.' },
         { from: 'popup.html', to: '.' },
         { from: 'styles.css', to: '.' },
-        { from: 'icons', to: 'icons' },
-        { from: '.env', to: '.env' },
-        // Include the utility files
-        { from: 'super_click.js', to: '.' }
+        { from: 'icons', to: 'icons' }
       ],
     }),
   ],
