@@ -1,5 +1,6 @@
 // Screenshot functionality
 import { getActiveTab, wait } from './background-utils.js';
+import chromeAPI from './chrome-api.js';
 
 // Take screenshot of the current tab
 export async function captureScreenshot(tabId) {
@@ -12,7 +13,7 @@ export async function captureScreenshot(tabId) {
     // Wait for UI to settle
     await wait(500);
     
-    return await chrome.tabs.captureVisibleTab(tab.windowId, {
+    return await chromeAPI.tabs.captureVisibleTab(tab.windowId, {
       format: 'png',
       quality: 100
     });
