@@ -1,100 +1,69 @@
 export class CommandProcessor {
-    constructor() {
-        console.log('🔧 Initializing CommandProcessor');
+  constructor() {
+    console.log('Initializing CommandProcessor');
+  }
+
+  async processCommand(input) {
+    const command = input.trim();
+    console.log('Processing command:', command);
+    return this.parseCommand(command);
+  }
+
+  parseCommand(input) {
+    // Navigation
+    if (/^(?:go|navigate|open|visit)(?:\s+to)?\s+(.+)/i.test(input)) {
+      const url = input.match(/^(?:go|navigate|open|visit)(?:\s+to)?\s+(.+)/i)[1].trim();
+      return { type: 'navigation', url };
     }
-
-    async processCommand(userInput) {
-        if (!userInput.trim()) return null;
-
-        try {
-            const command = this.parseCommand(userInput);
-            return command;
-        } catch (error) {
-            throw new Error(`Command processing failed: ${error.message}`);
-        }
+    
+    // Scrolling
+    if (/^scroll\s+(up|down)(?:\s+(\d+))?/i.test(input)) {
+      const match = input.match(/^scroll\s+(up|down)(?:\s+(\d+))?/i);
+      const direction = match[1].toLowerCase();
+      const amount = match[2] ? parseInt(match[2]) : 300;
+      return { 
+        type: 'scroll', 
+        direction, 
+        amount: direction === 'up' ? -amount : amount 
+      };
     }
-
-    parseCommand(input) {
-        const commands = [
-            // Vision test command
-            {
-                type: 'test_vision',
-                pattern: /^test\s+vision$/i,
-                handler: () => ({ type: 'test_vision' })
-            },
-            // Smart click command
-            {
-                type: 'smartClick',
-                pattern: /^click(?:\s+on)?\s+(?:the\s+)?([^\n]+)$/i,
-                handler: (match) => ({
-                    type: 'smartClick',
-                    target: match[1].trim(),
-                    useVision: true
-                })
-            },
-            // Navigation commands
-            {
-                type: 'navigation',
-                pattern: /^(?:go|navigate|open|visit)(?:\s+to)?\s+([^\s]+)/i,
-                handler: (match) => ({ 
-                    type: 'navigation', 
-                    url: match[1].toLowerCase(),
-                    skipFirstResult: false
-                })
-            },
-            // Search command
-            {
-                type: 'search',
-                pattern: /^search(?:\s+for)?\s+['"]?([^'"]+)['"]?$/i,
-                handler: (match) => ({ type: 'search', query: match[1] })
-            },
-            // Back command
-            {
-                type: 'back',
-                pattern: /^back$/i,
-                handler: () => ({ type: 'back' })
-            },
-            // Forward command
-            {
-                type: 'forward',
-                pattern: /^forward$/i,
-                handler: () => ({ type: 'forward' })
-            },
-            // Refresh command
-            {
-                type: 'refresh',
-                pattern: /^refresh$/i,
-                handler: () => ({ type: 'refresh' })
-            },
-            // Scroll commands
-            {
-                type: 'scroll',
-                pattern: /^scroll\s+(up|down)$/i,
-                handler: (match) => ({ 
-                    type: 'scroll', 
-                    direction: match[1].toLowerCase() 
-                })
-            },
-            // Google search command
-            {
-                type: 'search',
-                pattern: /^google\s+['"]?([^'"]+)['"]?$/i,
-                handler: (match) => ({ 
-                    type: 'search', 
-                    query: match[1],
-                    engine: 'google'
-                })
-            }
-        ];
-
-        for (const command of commands) {
-            const match = input.match(command.pattern);
-            if (match) {
-                console.log(`✅ Command matched pattern: ${command.type}`);
-                return command.handler(match);
-            }
-        }
-
-        throw new Error('Unknown command');
+    
+    // Back/forward
+    if (/^(?:go\s+)?back$/i.test(input)) {
+      return { type: 'back' };
     }
+    if (/^(?:go\s+)?forward$/i.test(input)) {
+      return { type: 'forward' };
+    }
+    
+    // Press enter
+    if (/^press\s+enter$/i.test(input)) {
+      return { type: 'press_enter' };
+    }
+    
+    // Type in specific field
+    if (/^type\s+(?:['"]?)(.+?)(?:['"]?)\s+in\s+(?:['"]?)(.+?)(?:['"]?)$/i.test(input)) {
+      const match = input.match(/^type\s+(?:['"]?)(.+?)(?:['"]?)\s+in\s+(?:['"]?)(.+?)(?:['"]?)$/i);
+      return {
+        type: 'input_targeted',
+        text: match[1].trim(),
+        target: match[2].trim()
+      };
+    }
+    
+    // Type general
+    if (/^type\s+(?:['"]?)(.+?)(?:['"]?)$/i.test(input)) {
+      const text = input.match(/^type\s+(?:['"]?)(.+?)(?:['"]?)$/i)[1].trim();
+      return { type: 'input', text };
+    }
+    
+    // Click
+    if (/^click\s+(.+)$/i.test(input)) {
+      const text = input.match(/^click\s+(.+)$/i)[1].trim();
+      return { type: 'click', text };
+    }
+    
+    console.log('No pattern matched for input:', input);
+    return null;
+  }
 }

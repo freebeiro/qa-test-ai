@@ -7,21 +7,108 @@
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
     "debug": "node debug_server.js",
-    "test:ui": "node ui_test_runner.js"
+    "test:ui": "node ui_test_runner.js",
+    "test": "jest tests/unit/simplified.test.js tests/unit/simple_url_helper.test.js tests/unit/simple_command_processor.test.js tests/unit/implementation.test.js tests/unit/debug_utils.test.js tests/unit/utils.test.js tests/unit/url_helper.test.js tests/unit/background.test.js tests/unit/browser_manager_actual.test.js tests/unit/browser_manager_mock.test.js tests/integration/simplified_integration.test.js",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest tests/unit/simplified.test.js tests/unit/simple_url_helper.test.js tests/unit/simple_command_processor.test.js tests/unit/implementation.test.js tests/unit/debug_utils.test.js tests/unit/utils.test.js tests/unit/url_helper.test.js tests/unit/background.test.js tests/unit/browser_manager_actual.test.js tests/unit/browser_manager_mock.test.js tests/integration/simplified_integration.test.js --coverage"
   },
   "dependencies": {
-    "express": "^4.18.2",
     "cors": "^2.8.5",
+    "electron": "^28.2.0",
+    "express": "^4.18.2",
     "playwright": "^1.41.2",
-    "playwright-core": "^1.41.2",
-    "electron": "^28.2.0"
+    "playwright-core": "^1.41.2"
   },
   "devDependencies": {
-    "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4",
-    "copy-webpack-plugin": "^11.0.0",
     "@babel/core": "^7.23.9",
     "@babel/preset-env": "^7.23.9",
-    "babel-loader": "^9.1.3"
+    "@testing-library/dom": "^8.20.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "babel-jest": "^27.5.1",
+    "babel-loader": "^9.1.3",
+    "copy-webpack-plugin": "^11.0.0",
+    "jest": "^27.5.1",
+    "jest-chrome": "^0.8.0",
+    "jest-environment-jsdom": "^27.5.1",
+    "sinon": "^15.2.0",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "moduleFileExtensions": [
+      "js",
+      "json"
+    ],
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    },
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "collectCoverageFrom": [
+      "background.js",
+      "popup.js",
+      "content.js",
+      "browser_manager.js",
+      "command_processor.js",
+      "typing_functions.js",
+      "debug_utils.js",
+      "url_helper.js",
+      "utils.js",
+      "tests/mocks/browser_manager.mock.js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "node_modules/",
+      "dist/",
+      "build/"
+    ],
+    "coverageThreshold": {
+      "./background.js": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./popup.js": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./content.js": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./browser_manager.js": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./command_processor.js": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "./typing_functions.js": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "global": {
+        "branches": 0,
+        "functions": 0,
+        "lines": 0,
+        "statements": 0
+      }
+    }
   }
 }
