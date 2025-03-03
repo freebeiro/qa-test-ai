@@ -3,9 +3,9 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: {
-    popup: './popup.js',
-    background: './background.js',
-    content: './content.js'
+    popup: './src/ui/popup.js',
+    background: './src/background/background.js',
+    content: './src/content/content.js',
   },
   output: {
     filename: '[name].bundle.js',
@@ -29,8 +29,8 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { from: 'manifest.json', to: '.' },
-        { from: 'popup.html', to: '.' },
-        { from: 'styles.css', to: '.' },
+        { from: './src/ui/popup.html', to: '.' },
+        { from: './src/ui/styles.css', to: '.' },
         { from: 'icons', to: 'icons' }
       ],
     }),

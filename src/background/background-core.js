@@ -1,20 +1,18 @@
 // Core background functionality
-import { captureScreenshot } from './screenshot.js';
-import { wait, formatError } from './background-utils.js';
+import { captureScreenshot, wait, formatError, chromeAPI } from '../utils/index.js';
 import { 
   handleTypingCommand,
+  handlePressEnterCommand,
   handleScrollCommand,
-  handleNavigationCommand,
   handleClickCommand,
+  handleNavigationCommand,
   handleBackCommand,
-  handleForwardCommand,
-  handlePressEnterCommand
-} from './command-handlers.js';
-import chromeAPI from './chrome-api.js';
+  handleForwardCommand
+} from '../commands/index.js';
 
 // State tracking
 let browserTabId = null;
-let qaWindow = null;
+let navigationHistory = {};
 
 // Command handler mapping - exported for better testability
 export const commandHandlers = {
@@ -36,6 +34,12 @@ export async function handleCommand(command) {
     
     if (!handler) {
       return { success: false, error: 'Unknown command type' };
+    }
+    
+    // For navigation commands, store the URL in our history tracker
+    if (command.type === 'navigation' && command.url) {
+      const { trackNavigation } = await import('../utils/background-utils.js');
+      trackNavigation(browserTabId, command.url);
     }
     
     // Execute the handler
@@ -76,7 +80,7 @@ export function setupExtensionHandler() {
   chromeAPI.action.onClicked.addListener(async (tab) => {
     browserTabId = tab?.id;
     
-    qaWindow = await chromeAPI.windows.create({
+    await chromeAPI.windows.create({
       url: chromeAPI.runtime.getURL('popup.html'),
       type: 'popup',
       width: 500,
@@ -87,10 +91,11 @@ export function setupExtensionHandler() {
   });
 }
 
-// Initialize the core functionality
+// Initialize functions - exported for testability
 export function initialize() {
   setupMessageHandler();
   setupExtensionHandler();
+  
   console.log('Background core initialized');
 }
 

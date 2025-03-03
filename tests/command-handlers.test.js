@@ -1,15 +1,15 @@
 // Test file for the command handlers
-import { formatUrl, formatError } from '../background-utils.js';
+import { formatUrl, formatError } from '../src/utils/index.js';
 import { 
   getInputSelectionScript,
   getScrollScript,
   getPressEnterScript,
   handleNavigationCommand
-} from '../command-handlers.js';
-import { commandHandlers, handleCommand } from '../background-core.js';
+} from '../src/commands/index.js';
+import { commandHandlers, handleCommand } from '../src/background/background-core.js';
 
 // Mock the Chrome API
-jest.mock('../chrome-api.js', () => {
+jest.mock('../src/utils/chrome-api.js', () => {
   return {
     __esModule: true,
     default: {
@@ -59,7 +59,7 @@ jest.mock('../chrome-api.js', () => {
 });
 
 // Mock the screenshot function
-jest.mock('../screenshot.js', () => ({
+jest.mock('../src/utils/screenshot.js', () => ({
   captureScreenshot: jest.fn().mockResolvedValue('mock-screenshot-data')
 }));
 
@@ -96,7 +96,7 @@ describe('Pure Functions', () => {
 
 describe('Command Handlers', () => {
   test('handleNavigationCommand navigates to URL', async () => {
-    const chromeAPI = require('../chrome-api.js').default;
+    const chromeAPI = require('../src/utils/chrome-api.js').default;
     const tabId = 123;
     const command = { type: 'navigation', url: 'example.com' };
     

@@ -1,8 +1,11 @@
-// Command handler functions
-import { getActiveTab, wait, formatUrl, formatError } from './background-utils.js';
-import chromeAPI from './chrome-api.js';
+// Input command handler functions
+import { getActiveTab, formatError, chromeAPI } from '../utils/index.js';
 
-// Input selection script - exported for testability
+/**
+ * Creates a script to select and fill an input element
+ * @param {string} text - The text to enter in the input
+ * @returns {Object} - Script object with function and arguments
+ */
 export function getInputSelectionScript(text) {
   return {
     function: (text) => {
@@ -32,7 +35,14 @@ export function getInputSelectionScript(text) {
   };
 }
 
-// Handle typing command
+/**
+ * Handle typing command
+ * @param {Object} command - The typing command object
+ * @param {string} command.text - The text to type
+ * @param {string} [command.target] - Optional target element for typing
+ * @param {number} browserTabId - The ID of the browser tab
+ * @returns {Promise<Object>} - Result of the typing operation
+ */
 export async function handleTypingCommand(command, browserTabId) {
   try {
     if (!browserTabId) {
@@ -66,86 +76,10 @@ export async function handleTypingCommand(command, browserTabId) {
   }
 }
 
-// Scroll script - exported for testability
-export function getScrollScript(amount) {
-  return {
-    function: (amount) => {
-      window.scrollBy(0, amount);
-      return { success: true };
-    },
-    args: [amount]
-  };
-}
-
-// Handle scrolling
-export async function handleScrollCommand(command, browserTabId) {
-  try {
-    const script = getScrollScript(command.amount);
-    await chromeAPI.scripting.executeScript({
-      target: { tabId: browserTabId },
-      function: script.function,
-      args: script.args
-    });
-    
-    return { success: true };
-  } catch (error) {
-    return formatError(error);
-  }
-}
-
-// Handle navigation commands
-export async function handleNavigationCommand(command, browserTabId) {
-  try {
-    const url = formatUrl(command.url);
-    await chromeAPI.tabs.update(browserTabId, { url });
-    
-    return new Promise(resolve => {
-      const listener = (tabId, changeInfo) => {
-        if (tabId === browserTabId && changeInfo.status === 'complete') {
-          chromeAPI.tabs.onUpdated.removeListener(listener);
-          resolve({ success: true });
-        }
-      };
-      chromeAPI.tabs.onUpdated.addListener(listener);
-    });
-  } catch (error) {
-    return formatError(error);
-  }
-}
-
-// Handle click command
-export async function handleClickCommand(command, browserTabId) {
-  try {
-    return await chromeAPI.tabs.sendMessage(browserTabId, { 
-      type: 'CLICK', 
-      text: command.text 
-    });
-  } catch (error) {
-    return formatError(error);
-  }
-}
-
-// Handle back navigation
-export async function handleBackCommand(browserTabId) {
-  try {
-    await chromeAPI.tabs.goBack(browserTabId);
-    return { success: true };
-  } catch (error) {
-    return formatError(error);
-  }
-}
-
-// Handle forward navigation
-export async function handleForwardCommand(browserTabId) {
-  try {
-    await chromeAPI.tabs.goForward(browserTabId);
-    return { success: true };
-  } catch (error) {
-    return formatError(error);
-  }
-}
-
-// Press enter script - exported for testability
+/**
+ * Creates a script to press the Enter key
+ * @returns {Object} - Script object with function
+ */
 export function getPressEnterScript() {
   return {
     function: () => {
@@ -160,7 +94,11 @@ export function getPressEnterScript() {
   };
 }
 
-// Handle press enter
+/**
+ * Handle press enter command
+ * @param {number} browserTabId - The ID of the browser tab
+ * @returns {Promise<Object>} - Result of the press enter operation
+ */
 export async function handlePressEnterCommand(browserTabId) {
   try {
     const script = getPressEnterScript();
@@ -172,4 +110,4 @@ export async function handlePressEnterCommand(browserTabId) {
   } catch (error) {
     return formatError(error);
   }
-}
+} 
