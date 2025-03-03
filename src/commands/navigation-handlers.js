@@ -1,5 +1,5 @@
 // Navigation command handler functions
-import { formatUrl, formatError, chromeAPI } from '../utils/index.js';
+import { formatUrl, formatError, chromeAPI, trackNavigation } from '../utils/index.js';
 
 /**
  * Handle navigation commands
@@ -11,6 +11,10 @@ import { formatUrl, formatError, chromeAPI } from '../utils/index.js';
 export async function handleNavigationCommand(command, browserTabId) {
   try {
     const url = formatUrl(command.url);
+    
+    // Track this URL in our navigation history
+    trackNavigation(browserTabId, url);
+    
     await chromeAPI.tabs.update(browserTabId, { url });
     
     return new Promise(resolve => {
@@ -36,7 +40,15 @@ export async function handleBackCommand(browserTabId) {
   try {
     // Ensure browserTabId is a number
     const tabId = typeof browserTabId === 'number' ? browserTabId : null;
+    
+    // Log that we're attempting to navigate back
+    console.log(`Attempting to navigate back for tab ${tabId}`);
+    
     const result = await chromeAPI.tabs.goBack(tabId);
+    
+    // Log the result
+    console.log(`Back navigation result:`, result);
+    
     return result;
   } catch (error) {
     console.error("Back navigation error:", error);
@@ -53,7 +65,15 @@ export async function handleForwardCommand(browserTabId) {
   try {
     // Ensure browserTabId is a number
     const tabId = typeof browserTabId === 'number' ? browserTabId : null;
+    
+    // Log that we're attempting to navigate forward
+    console.log(`Attempting to navigate forward for tab ${tabId}`);
+    
     const result = await chromeAPI.tabs.goForward(tabId);
+    
+    // Log the result
+    console.log(`Forward navigation result:`, result);
+    
     return result;
   } catch (error) {
     console.error("Forward navigation error:", error);

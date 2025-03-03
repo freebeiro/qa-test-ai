@@ -1,5 +1,5 @@
 // Chrome navigation helper functions
-import { getNavigationHistory } from './background-utils.js';
+import { getNavigationHistory, getCurrentPosition, setCurrentPosition } from './background-utils.js';
 
 /**
  * Creates a simplified wrapper for Chrome navigation functions that matches
@@ -19,14 +19,44 @@ export function createNavigationHandler(method, tabId) {
       if (tabId && typeof tabId === 'number') {
         // Get history for this tab using the getNavigationHistory function
         let historyStack = getNavigationHistory(tabId);
+        let currentPosition = getCurrentPosition(tabId);
+        
+        console.log(`Navigation history for tab ${tabId}:`, historyStack);
+        console.log(`Current position for tab ${tabId}:`, currentPosition);
         
         if (historyStack && historyStack.length > 1) {
-          let currentIndex = historyStack.length - 1;
-          
           // Handle back navigation with custom history
-          if (!isForward && currentIndex > 0) {
-            let prevUrl = historyStack[currentIndex - 1];
+          if (!isForward && currentPosition > 0) {
+            let newPosition = currentPosition - 1;
+            let prevUrl = historyStack[newPosition];
+            
+            console.log(`Navigating back to ${prevUrl} (position ${newPosition})`);
+            
+            // Update the current position
+            setCurrentPosition(tabId, newPosition);
+            
             chrome.tabs.update(tabId, { url: prevUrl }, () => {
+              if (chrome.runtime.lastError) {
+                console.warn("Navigation failed:", chrome.runtime.lastError);
+                resolve({ success: false, error: chrome.runtime.lastError.message });
+              } else {
+                resolve({ success: true });
+              }
+            });
+            return; // Exit early, we've handled it
+          }
+          
+          // Handle forward navigation with custom history
+          if (isForward && currentPosition < historyStack.length - 1) {
+            let newPosition = currentPosition + 1;
+            let nextUrl = historyStack[newPosition];
+            
+            console.log(`Navigating forward to ${nextUrl} (position ${newPosition})`);
+            
+            // Update the current position
+            setCurrentPosition(tabId, newPosition);
+            
+            chrome.tabs.update(tabId, { url: nextUrl }, () => {
               if (chrome.runtime.lastError) {
                 console.warn("Navigation failed:", chrome.runtime.lastError);
                 resolve({ success: false, error: chrome.runtime.lastError.message });
@@ -38,7 +68,10 @@ export function createNavigationHandler(method, tabId) {
           }
         }
       }
+      
+      // Fall back to using the browser's history via content script
       if (tabId && typeof tabId === 'number') {
+        console.log(`Using browser history for ${isForward ? 'forward' : 'back'} navigation`);
         chrome.scripting.executeScript({
           target: { tabId },
           func: (goForward) => { 
@@ -60,6 +93,7 @@ export function createNavigationHandler(method, tabId) {
         });
       } else {
         // Fallback to less reliable method if no tabId
+        console.log(`Using fallback method for ${isForward ? 'forward' : 'back'} navigation`);
         method(() => {
           if (chrome.runtime.lastError) {
             console.warn("No navigation history available", chrome.runtime.lastError);

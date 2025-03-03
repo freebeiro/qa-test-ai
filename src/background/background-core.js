@@ -12,7 +12,6 @@ import {
 
 // State tracking
 let browserTabId = null;
-let navigationHistory = {};
 
 // Command handler mapping - exported for better testability
 export const commandHandlers = {
@@ -34,12 +33,6 @@ export async function handleCommand(command) {
     
     if (!handler) {
       return { success: false, error: 'Unknown command type' };
-    }
-    
-    // For navigation commands, store the URL in our history tracker
-    if (command.type === 'navigation' && command.url) {
-      const { trackNavigation } = await import('../utils/background-utils.js');
-      trackNavigation(browserTabId, command.url);
     }
     
     // Execute the handler

@@ -6,6 +6,7 @@ Welcome to the QA Testing Assistant documentation. This documentation will help 
 
 - [Architecture](ARCHITECTURE.md) - Overview of the project architecture and design
 - [Development Guide](DEVELOPMENT.md) - Guide for developers working on the project
+- [Best Practices](BEST_PRACTICES.md) - Coding standards and best practices to follow
 - [Troubleshooting](TROUBLESHOOTING.md) - Solutions for common issues
 
 ## Quick Start
@@ -27,7 +28,7 @@ Welcome to the QA Testing Assistant documentation. This documentation will help 
 
 ## Contributing
 
-We welcome contributions to the QA Testing Assistant. Please see the [Development Guide](DEVELOPMENT.md) for information on how to contribute.
+We welcome contributions to the QA Testing Assistant. Please see the [Development Guide](DEVELOPMENT.md) for information on how to contribute and follow our [Best Practices](BEST_PRACTICES.md) when writing code.
 
 ## License
 
