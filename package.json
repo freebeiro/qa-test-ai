@@ -7,10 +7,11 @@
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
     "debug": "node debug_server.js",
-    "test:ui": "node ui_test_runner.js",
-    "test": "jest tests/unit/simplified.test.js tests/unit/simple_url_helper.test.js tests/unit/simple_command_processor.test.js tests/unit/implementation.test.js tests/unit/debug_utils.test.js tests/unit/utils.test.js tests/unit/url_helper.test.js tests/unit/background.test.js tests/unit/browser_manager_actual.test.js tests/unit/browser_manager_mock.test.js tests/integration/simplified_integration.test.js",
+    "test:ui": "node ui_test_runner.js", 
+    "test": "jest",
+    "test:command-handlers": "jest tests/command-handlers.test.js",
     "test:watch": "jest --watch",
-    "test:coverage": "jest tests/unit/simplified.test.js tests/unit/simple_url_helper.test.js tests/unit/simple_command_processor.test.js tests/unit/implementation.test.js tests/unit/debug_utils.test.js tests/unit/utils.test.js tests/unit/url_helper.test.js tests/unit/background.test.js tests/unit/browser_manager_actual.test.js tests/unit/browser_manager_mock.test.js tests/integration/simplified_integration.test.js --coverage"
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -51,15 +52,18 @@
     ],
     "collectCoverageFrom": [
       "background.js",
-      "popup.js",
+      "background-core.js",
+      "background-utils.js",
+      "command-handlers.js",
+      "screenshot.js",
+      "chrome-api.js",
       "content.js",
-      "browser_manager.js",
-      "command_processor.js",
-      "typing_functions.js",
-      "debug_utils.js",
-      "url_helper.js",
-      "utils.js",
-      "tests/mocks/browser_manager.mock.js"
+      "content-core.js",
+      "content-utils.js",
+      "element-finder.js",
+      "element-actions.js",
+      "popup.js",
+      "command_processor.js"
     ],
     "coveragePathIgnorePatterns": [
       "node_modules/",
