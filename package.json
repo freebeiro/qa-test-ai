@@ -51,19 +51,8 @@
       "<rootDir>/tests/setup.js"
     ],
     "collectCoverageFrom": [
-      "background.js",
-      "background-core.js",
-      "background-utils.js",
-      "command-handlers.js",
-      "screenshot.js",
-      "chrome-api.js",
-      "content.js",
-      "content-core.js",
-      "content-utils.js",
-      "element-finder.js",
-      "element-actions.js",
-      "popup.js",
-      "command_processor.js"
+      "src/**/*.js",
+      "!src/**/*.bundle.js"
     ],
     "coveragePathIgnorePatterns": [
       "node_modules/",
@@ -71,37 +60,31 @@
       "build/"
     ],
     "coverageThreshold": {
-      "./background.js": {
+      "src/background/background.js": {
         "branches": 80,
         "functions": 80,
         "lines": 80,
         "statements": 80
       },
-      "./popup.js": {
+      "src/background/background-core.js": {
         "branches": 80,
         "functions": 80,
         "lines": 80,
         "statements": 80
       },
-      "./content.js": {
+      "src/ui/popup.js": {
         "branches": 80,
         "functions": 80,
         "lines": 80,
         "statements": 80
       },
-      "./browser_manager.js": {
+      "src/content/content.js": {
         "branches": 80,
         "functions": 80,
         "lines": 80,
         "statements": 80
       },
-      "./command_processor.js": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      },
-      "./typing_functions.js": {
+      "src/commands/command_processor.js": {
         "branches": 80,
         "functions": 80,
         "lines": 80,
