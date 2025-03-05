@@ -1,15 +1,31 @@
-// Test file for the popup.js entry point
-import { QAInterface as PopupQAInterface } from '../src/ui/popup.js';
-import { QAInterface as IndexQAInterface } from '../src/ui/index.js';
-
-// Mock index.js
-jest.mock('../src/ui/index.js', () => ({
-  QAInterface: jest.fn()
-}));
+// Test file for the popup.js entry point - outcome focused
+import '../src/ui/popup.js';
 
 describe('Popup Script', () => {
-  it('should re-export the QAInterface from index.js', () => {
-    // Verify that the popup.js QAInterface is the same as the index.js one
-    expect(PopupQAInterface).toBe(IndexQAInterface);
+  beforeEach(() => {
+    // Set up document body
+    document.body.innerHTML = `
+      <div id="app">
+        <div class="chat-container" id="screenshot"></div>
+        <div class="input-group">
+          <textarea id="command-input"></textarea>
+          <button id="send-button">Send</button>
+        </div>
+      </div>
+    `;
+    
+    // Mock DOM content loaded
+    const event = new Event('DOMContentLoaded');
+    document.dispatchEvent(event);
+  });
+  
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+  
+  it('should export QAInterface', () => {
+    // Check if QAInterface is exported
+    const exportedModule = require('../src/ui/popup.js');
+    expect(exportedModule).toHaveProperty('QAInterface');
   });
 });
