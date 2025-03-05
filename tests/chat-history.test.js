@@ -93,9 +93,57 @@ describe('ChatHistory', () => {
       const image = containerElement.querySelector('img');
       expect(image).not.toBeNull();
       expect(image.src).toContain('data:image/png;base64,abc123');
+      
+      // Test clicking the image for fullscreen view
+      const clickEvent = new MouseEvent('click');
+      image.dispatchEvent(clickEvent);
+      
+      // Test clicking the zoom button
+      const zoomButton = containerElement.querySelector('.screenshot-controls button');
+      expect(zoomButton).not.toBeNull();
+      zoomButton.click();
     });
   });
   
+  describe('showFullscreenImage', () => {
+    it('should create a fullscreen div with image and close button', () => {
+      // Mock document.body.appendChild to capture the fullscreen div
+      let fullscreenDiv;
+      document.body.appendChild = jest.fn(element => {
+        fullscreenDiv = element;
+      });
+      
+      // Call the method
+      chatHistory.showFullscreenImage('data:image/png;base64,test');
+      
+      // Verify the fullscreen div was created correctly
+      expect(fullscreenDiv).toBeDefined();
+      expect(fullscreenDiv.className).toBe('screenshot-fullscreen');
+      
+      // Verify the image
+      const img = fullscreenDiv.querySelector('img');
+      expect(img).toBeDefined();
+      expect(img.src).toContain('data:image/png;base64,test');
+      
+      // Verify the close button
+      const closeButton = fullscreenDiv.querySelector('.close-button');
+      expect(closeButton).toBeDefined();
+      
+      // Test closing by clicking the close button
+      const removeStub = jest.fn();
+      fullscreenDiv.remove = removeStub;
+      closeButton.click();
+      expect(removeStub).toHaveBeenCalled();
+      
+      // Test clicking on the background
+      removeStub.mockClear();
+      const clickEvent = new MouseEvent('click');
+      Object.defineProperty(clickEvent, 'target', {value: fullscreenDiv});
+      fullscreenDiv.dispatchEvent(clickEvent);
+      expect(removeStub).toHaveBeenCalled();
+    });
+  });
+
   describe('getHistory and clearHistory', () => {
     it('should return a copy of the chat history array', () => {
       chatHistory.addEntry({ command: 'command 1' });

@@ -1,5 +1,6 @@
 // Test file for Chrome API wrapper - focused on outcomes
 import chromeAPI from '../src/utils/chrome-api.js';
+import { createNavigationHandler } from '../src/utils/chrome-navigation.js';
 
 // Mock chrome-navigation.js
 jest.mock('../src/utils/chrome-navigation.js', () => ({
@@ -63,40 +64,65 @@ describe('Chrome API Wrapper', () => {
     jest.clearAllMocks();
   });
   
-  describe('API Structure', () => {
-    it('should expose the expected Chrome API interfaces', () => {
-      expect(chromeAPI.tabs).toBeDefined();
-      expect(chromeAPI.windows).toBeDefined();
-      expect(chromeAPI.runtime).toBeDefined();
-      expect(chromeAPI.storage).toBeDefined();
-      expect(chromeAPI.scripting).toBeDefined();
-      expect(chromeAPI.action).toBeDefined();
+  describe('API Testing', () => {
+    // Test Tabs API
+    it('should pass parameters correctly for tabs API methods', async () => {
+      await chromeAPI.tabs.get(123);
+      expect(chrome.tabs.get).toHaveBeenCalledWith(123);
+      
+      await chromeAPI.tabs.update(123, { url: 'https://example.com' });
+      expect(chrome.tabs.update).toHaveBeenCalledWith(123, { url: 'https://example.com' });
+      
+      await chromeAPI.tabs.captureVisibleTab(456, { format: 'png' });
+      expect(chrome.tabs.captureVisibleTab).toHaveBeenCalledWith(456, { format: 'png' });
+      
+      await chromeAPI.tabs.goBack(123);
+      expect(createNavigationHandler).toHaveBeenCalledWith(chrome.tabs.goBack, 123);
+      
+      await chromeAPI.tabs.goForward(123);
+      expect(createNavigationHandler).toHaveBeenCalledWith(chrome.tabs.goForward, 123);
+      
+      await chromeAPI.tabs.sendMessage(123, { type: 'TEST' });
+      expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(123, { type: 'TEST' });
+    });
+    
+    // Test Windows API
+    it('should pass parameters correctly for windows API methods', async () => {
+      await chromeAPI.windows.update(456, { focused: true });
+      expect(chrome.windows.update).toHaveBeenCalledWith(456, { focused: true });
+      
+      await chromeAPI.windows.create({ url: 'popup.html', type: 'popup' });
+      expect(chrome.windows.create).toHaveBeenCalledWith({ url: 'popup.html', type: 'popup' });
+    });
+    
+    // Test Runtime API
+    it('should pass parameters correctly for runtime API methods', async () => {
+      chromeAPI.runtime.getURL('popup.html');
+      expect(chrome.runtime.getURL).toHaveBeenCalledWith('popup.html');
+      
+      await chromeAPI.runtime.sendMessage({ type: 'TEST' });
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'TEST' });
+    });
+    
+    // Test Scripting API
+    it('should pass parameters correctly for scripting API methods', async () => {
+      const injection = { target: { tabId: 123 }, func: () => {} };
+      await chromeAPI.scripting.executeScript(injection);
+      expect(chrome.scripting.executeScript).toHaveBeenCalledWith(injection);
+    });
+    
+    // Test Storage API
+    it('should correctly pass through the storage API', () => {
+      chromeAPI.storage.local.set({ key: 'value' });
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({ key: 'value' });
     });
   });
   
-  describe('Function Availability', () => {
-    it('should provide expected tabs functions', () => {
-      expect(typeof chromeAPI.tabs.get).toBe('function');
-      expect(typeof chromeAPI.tabs.update).toBe('function');
-      expect(typeof chromeAPI.tabs.captureVisibleTab).toBe('function');
-      expect(typeof chromeAPI.tabs.goBack).toBe('function');
-      expect(typeof chromeAPI.tabs.goForward).toBe('function');
-      expect(typeof chromeAPI.tabs.sendMessage).toBe('function');
-    });
-    
-    it('should provide expected windows functions', () => {
-      expect(typeof chromeAPI.windows.update).toBe('function');
-      expect(typeof chromeAPI.windows.create).toBe('function');
-    });
-    
-    it('should provide expected runtime functions', () => {
-      expect(typeof chromeAPI.runtime.getURL).toBe('function');
-      expect(typeof chromeAPI.runtime.sendMessage).toBe('function');
-      expect(chromeAPI.runtime.onMessage).toBeDefined();
-    });
-    
-    it('should provide expected scripting functions', () => {
-      expect(typeof chromeAPI.scripting.executeScript).toBe('function');
+  describe('API Reference Passing', () => {
+    it('should pass through Chrome API references correctly', () => {
+      expect(chromeAPI.tabs.onUpdated).toBe(chrome.tabs.onUpdated);
+      expect(chromeAPI.runtime.onMessage).toBe(chrome.runtime.onMessage);
+      expect(chromeAPI.action.onClicked).toBe(chrome.action.onClicked);
     });
   });
 });
