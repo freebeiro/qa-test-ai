@@ -1,35 +1,13 @@
 // Test file for the background.js main entry point - outcome focused
 import { handleCommand } from '../src/background/background.js';
 
+// Mock background-core.js which is imported by background.js
+jest.mock('../src/background/background-core.js', () => ({
+  handleCommand: jest.fn().mockResolvedValue({ success: true, screenshot: 'data:image/png;base64,test' })
+}));
+
 describe('Background Script', () => {
-  // Store original chrome APIs
-  const originalChrome = global.chrome;
-  
   beforeEach(() => {
-    // Mock chrome APIs
-    global.chrome = {
-      runtime: {
-        onMessage: {
-          addListener: jest.fn()
-        }
-      },
-      tabs: {
-        get: jest.fn(),
-        update: jest.fn().mockResolvedValue({}),
-        sendMessage: jest.fn(),
-        captureVisibleTab: jest.fn().mockResolvedValue('data:image/png;base64,test')
-      },
-      scripting: {
-        executeScript: jest.fn().mockResolvedValue([{result: {success: true}}])
-      }
-    };
-    
-    // Suppress console output
-    jest.spyOn(console, 'log').mockImplementation();
-  });
-  
-  afterEach(() => {
-    global.chrome = originalChrome;
     jest.clearAllMocks();
   });
   
@@ -37,11 +15,16 @@ describe('Background Script', () => {
     expect(typeof handleCommand).toBe('function');
   });
   
-  it('should handle a navigation command', async () => {
-    const result = await handleCommand({ type: 'navigation', url: 'https://example.com' });
+  it('should pass commands to the core implementation', async () => {
+    const mockCommand = { type: 'test' };
     
-    // Only verify we get a result with expected structure, not implementation details
-    expect(result).toHaveProperty('success');
-    expect(result).toHaveProperty('screenshot');
+    // Get the mocked function
+    const mockedCore = require('../src/background/background-core.js');
+    
+    // Call the exported handleCommand
+    await handleCommand(mockCommand);
+    
+    // Verify it calls the background-core implementation
+    expect(mockedCore.handleCommand).toHaveBeenCalledWith(mockCommand);
   });
 });

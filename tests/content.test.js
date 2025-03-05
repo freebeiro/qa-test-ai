@@ -1,43 +1,22 @@
 // Test file for the content.js main entry point - outcome focused
-// Note: This is tricky to test purely on outcomes since it's mostly initialization
-// We'll test it by checking if it sets up core content script functionality
+// Note: This file only imports and runs initialize()
+
+// Mock content-core.js to verify it gets called
+jest.mock('../src/content/content-core.js', () => ({
+  initialize: jest.fn()
+}));
 
 describe('Content Script', () => {
-  // Save original chrome object
-  const originalChrome = global.chrome;
-  
   beforeEach(() => {
-    // Set up DOM for testing
-    document.body.innerHTML = '<div id="test-element">Test</div>';
-    
-    // Set up chrome mocks 
-    global.chrome = {
-      runtime: {
-        onMessage: {
-          addListener: jest.fn()
-        }
-      }
-    };
-    
-    // Suppress console output
-    jest.spyOn(console, 'log').mockImplementation();
-  });
-  
-  afterEach(() => {
-    // Restore original chrome
-    global.chrome = originalChrome;
-    
-    // Clean up DOM
-    document.body.innerHTML = '';
-    
     jest.clearAllMocks();
   });
   
-  it('should set up message listener when loaded', () => {
-    // Import content.js which should set up the message listener
+  it('should call initialize when imported', () => {
+    // Import the content script which should call initialize
     require('../src/content/content.js');
     
-    // Verify the message listener was set up
-    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
+    // Check if initialize was called
+    const contentCore = require('../src/content/content-core.js');
+    expect(contentCore.initialize).toHaveBeenCalled();
   });
 });
