@@ -99,6 +99,54 @@ describe('Background Core', () => {
       
       expect(utils.formatError).toHaveBeenCalledWith(error);
     });
+    
+    it('should handle success with message from command handlers', async () => {
+      const command = { type: 'click', text: 'button' };
+      commands.handleClickCommand.mockResolvedValueOnce({ 
+        success: true, 
+        message: 'Successfully clicked' 
+      });
+      
+      const result = await handleCommand(command);
+      
+      expect(result).toEqual({
+        success: true,
+        message: 'Successfully clicked',
+        error: undefined,
+        screenshot: 'mock-screenshot-data'
+      });
+    });
+    
+    it('should handle failure with error from command handlers', async () => {
+      const command = { type: 'click', text: 'button' };
+      commands.handleClickCommand.mockResolvedValueOnce({ 
+        success: false, 
+        error: 'Failed to click' 
+      });
+      
+      const result = await handleCommand(command);
+      
+      expect(result).toEqual({
+        success: false,
+        message: undefined,
+        error: 'Failed to click',
+        screenshot: 'mock-screenshot-data'
+      });
+    });
+
+    it('should handle null screenshot result', async () => {
+      const command = { type: 'click', text: 'button' };
+      utils.captureScreenshot.mockResolvedValueOnce(null);
+      
+      const result = await handleCommand(command);
+      
+      expect(result).toEqual({
+        success: true,
+        message: undefined,
+        error: undefined,
+        screenshot: null
+      });
+    });
   });
   
   describe('setupMessageHandler', () => {
@@ -134,6 +182,54 @@ describe('Background Core', () => {
       // Restore the spy
       handleCommandSpy.mockRestore();
     });
+    
+    it('should handle non-EXECUTE_COMMAND messages', async () => {
+      setupMessageHandler();
+      
+      // Get the listener that was registered
+      const listener = utils.chromeAPI.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponseMock = jest.fn();
+      
+      // Call the listener with a different message type
+      const returnValue = listener(
+        { type: 'OTHER_MESSAGE' },
+        {},
+        sendResponseMock
+      );
+      
+      // Non-EXECUTE_COMMAND messages should not return true
+      expect(returnValue).not.toBe(true);
+      expect(sendResponseMock).not.toHaveBeenCalled();
+    });
+    
+    it('should handle errors in EXECUTE_COMMAND messages', async () => {
+      setupMessageHandler();
+      
+      // Get the listener that was registered
+      const listener = utils.chromeAPI.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponseMock = jest.fn();
+      
+      // Spy on handleCommand and make it throw
+      const handleCommandSpy = jest.spyOn({ handleCommand }, 'handleCommand');
+      const error = new Error('Test error');
+      handleCommandSpy.mockRejectedValue(error);
+      
+      // Call the listener with a message
+      listener(
+        { type: 'EXECUTE_COMMAND', command: { type: 'click' } },
+        {},
+        sendResponseMock
+      );
+      
+      // Allow the promise to resolve
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      // Verify that formatError was used for the response
+      expect(utils.formatError).toHaveBeenCalledWith(error);
+      
+      // Restore the spy
+      handleCommandSpy.mockRestore();
+    });
   });
   
   describe('setupExtensionHandler', () => {
@@ -161,6 +257,32 @@ describe('Background Core', () => {
       
       expect(utils.chromeAPI.storage.local.set).toHaveBeenCalledWith({ browserTabId: 456 });
     });
+
+    it('should handle null tab ID', async () => {
+      setupExtensionHandler();
+      
+      // Get the listener
+      const listener = utils.chromeAPI.action.onClicked.addListener.mock.calls[0][0];
+      
+      // Call the listener with a tab with null id
+      await listener({ id: null });
+      
+      expect(utils.chromeAPI.windows.create).toHaveBeenCalled();
+      expect(utils.chromeAPI.storage.local.set).toHaveBeenCalledWith({ browserTabId: null });
+    });
+
+    it('should handle undefined tab', async () => {
+      setupExtensionHandler();
+      
+      // Get the listener
+      const listener = utils.chromeAPI.action.onClicked.addListener.mock.calls[0][0];
+      
+      // Call the listener with undefined
+      await listener(undefined);
+      
+      expect(utils.chromeAPI.windows.create).toHaveBeenCalled();
+      expect(utils.chromeAPI.storage.local.set).toHaveBeenCalledWith({ browserTabId: null });
+    });
   });
   
   describe('initialize', () => {
@@ -177,6 +299,38 @@ describe('Background Core', () => {
       // Restore spies
       setupMessageHandlerSpy.mockRestore();
       setupExtensionHandlerSpy.mockRestore();
+    });
+
+    it('should initialize browserTabId from storage if available', () => {
+      // Make storage.get callback with valid data
+      utils.chromeAPI.storage.local.get.mockImplementationOnce((key, callback) => {
+        callback({ browserTabId: 789 });
+      });
+      
+      initialize();
+      
+      // Execute the callback
+      utils.chromeAPI.storage.local.get.mock.calls[0][1]({ browserTabId: 789 });
+      
+      expect(getBrowserTabId()).toBe(789);
+    });
+    
+    it('should handle missing browserTabId in storage', () => {
+      // Reset browserTabId
+      setBrowserTabId(null);
+      
+      // Make storage.get callback with no data
+      utils.chromeAPI.storage.local.get.mockImplementationOnce((key, callback) => {
+        callback({});
+      });
+      
+      initialize();
+      
+      // Execute the callback
+      utils.chromeAPI.storage.local.get.mock.calls[0][1]({});
+      
+      // Should remain null if no data in storage
+      expect(getBrowserTabId()).toBeNull();
     });
   });
   
