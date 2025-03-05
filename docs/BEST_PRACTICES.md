@@ -2,6 +2,45 @@
 
 This document outlines the best practices to follow when developing the QA Testing Assistant extension. Following these guidelines will ensure code quality, maintainability, and testability.
 
+## Code Modification Guidelines
+
+### Read Before Changing
+
+- **Before changing anything, make sure you read all the files needed**
+  - Understand the architecture and relationships between components
+  - Be aware of the project structure and how files interact
+  - Trace the execution flow to identify where issues originate
+
+### Avoid Assumptions
+
+- **Don't assume anything**
+  - Verify your assumptions with logs and debugging
+  - Check actual data types and values at runtime
+  - Test edge cases and unexpected inputs
+
+### Make Surgical Changes
+
+- **Make surgical changes, not full file rewrites**
+  - Detect the specific problem and change only what's necessary
+  - Apply minimal changes to fix issues
+  - Respect the existing architecture and patterns
+  - Avoid introducing additional complexity
+
+### Justify Major Changes
+
+- **For significant changes, provide reasoning**
+  - If deeper or more widespread changes are needed, explain why
+  - Get approval before implementing major architectural changes
+  - Document the reasoning and trade-offs for future reference
+
+### Type Safety
+
+- **Be explicit about types**
+  - Always validate data types when interacting with browser APIs
+  - Be explicit with type conversions when necessary (e.g., `parseInt()`)
+  - Check for null/undefined values before operations
+  - Remember that browser storage often converts values to strings
+
 ## Code Organization
 
 ### Directory Structure
@@ -92,6 +131,22 @@ This document outlines the best practices to follow when developing the QA Testi
 - **Provide meaningful error messages**: Error messages should be descriptive
 - **Log errors**: Use console.error for debugging
 - **Return standardized error objects**: Use formatError for consistent error handling
+
+## Browser API Interactions
+
+### Tab IDs and Type Safety
+
+- **Always ensure tab IDs are integers before using in API calls**
+  - Explicitly convert tab IDs with `parseInt()` when retrieved from storage
+  - Provide fallbacks when tab IDs are missing or invalid
+  - Test navigation commands with different tab states
+
+### Chrome API Error Handling
+
+- **Always check for `chrome.runtime.lastError` after API calls**
+  - Log detailed error information for debugging
+  - Implement fallback mechanisms for API failures
+  - Consider implementing custom tracking for unreliable browser features (e.g., history navigation)
 
 ## Testing
 
