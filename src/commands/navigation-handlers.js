@@ -36,10 +36,11 @@ export async function handleNavigationCommand(command, browserTabId) {
  * @param {number} browserTabId - The ID of the browser tab
  * @returns {Promise<Object>} - Result of the back navigation operation
  */
-export async function handleBackCommand(browserTabId) {
+export async function handleBackCommand(command, browserTabId) {
   try {
-    // Ensure browserTabId is a number
-    const tabId = typeof browserTabId === 'number' ? browserTabId : null;
+    // Ensure browserTabId is a valid numeric value
+    const tabId = typeof browserTabId === 'number' ? browserTabId : 
+               (browserTabId && !isNaN(parseInt(browserTabId)) ? parseInt(browserTabId) : null);
     
     // Log that we're attempting to navigate back
     console.log(`Attempting to navigate back for tab ${tabId}`);
@@ -61,10 +62,11 @@ export async function handleBackCommand(browserTabId) {
  * @param {number} browserTabId - The ID of the browser tab
  * @returns {Promise<Object>} - Result of the forward navigation operation
  */
-export async function handleForwardCommand(browserTabId) {
+export async function handleForwardCommand(command, browserTabId) {
   try {
-    // Ensure browserTabId is a number
-    const tabId = typeof browserTabId === 'number' ? browserTabId : null;
+    // Ensure browserTabId is a valid numeric value
+    const tabId = typeof browserTabId === 'number' ? browserTabId : 
+                (browserTabId && !isNaN(parseInt(browserTabId)) ? parseInt(browserTabId) : null);
     
     // Log that we're attempting to navigate forward
     console.log(`Attempting to navigate forward for tab ${tabId}`);
