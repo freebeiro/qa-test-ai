@@ -1,0 +1,27 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+chrome-testing-profile/
+qa-testing-assistant.zip
+
+# Temporary files
+*.zip

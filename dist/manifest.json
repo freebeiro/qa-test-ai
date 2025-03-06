@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "QA Testing Assistant",
+  "version": "1.0",
+  "description": "Assistant for QA testing with Playwright and vision model integration",
+  "permissions": ["tabs", "scripting", "storage", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "QA Testing Assistant",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.bundle.js"],
+    "run_at": "document_idle"
+  }],
+  "background": {
+    "service_worker": "background.bundle.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
